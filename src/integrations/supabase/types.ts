@@ -14,7 +14,164 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      gastos: {
+        Row: {
+          categoria: Database["public"]["Enums"]["categoria_gasto"]
+          comprovante_url: string | null
+          created_at: string
+          data: string
+          descricao: string
+          id: string
+          responsavel: string | null
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          categoria?: Database["public"]["Enums"]["categoria_gasto"]
+          comprovante_url?: string | null
+          created_at?: string
+          data?: string
+          descricao: string
+          id?: string
+          responsavel?: string | null
+          user_id: string
+          valor: number
+        }
+        Update: {
+          categoria?: Database["public"]["Enums"]["categoria_gasto"]
+          comprovante_url?: string | null
+          created_at?: string
+          data?: string
+          descricao?: string
+          id?: string
+          responsavel?: string | null
+          user_id?: string
+          valor?: number
+        }
+        Relationships: []
+      }
+      pagamentos: {
+        Row: {
+          created_at: string
+          data_pagamento: string
+          forma_pagamento: Database["public"]["Enums"]["forma_pagamento"]
+          id: string
+          observacao: string | null
+          participante_id: string
+          referencia: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          data_pagamento?: string
+          forma_pagamento?: Database["public"]["Enums"]["forma_pagamento"]
+          id?: string
+          observacao?: string | null
+          participante_id: string
+          referencia: string
+          user_id: string
+          valor: number
+        }
+        Update: {
+          created_at?: string
+          data_pagamento?: string
+          forma_pagamento?: Database["public"]["Enums"]["forma_pagamento"]
+          id?: string
+          observacao?: string | null
+          participante_id?: string
+          referencia?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagamentos_participante_id_fkey"
+            columns: ["participante_id"]
+            isOneToOne: false
+            referencedRelation: "participantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      participantes: {
+        Row: {
+          apelido: string | null
+          created_at: string
+          data_entrada: string
+          data_nascimento: string | null
+          foto_url: string | null
+          id: string
+          nome: string
+          status: Database["public"]["Enums"]["status_participante"]
+          telefone: string | null
+          tipo_plano: Database["public"]["Enums"]["tipo_plano"]
+          updated_at: string
+          user_id: string
+          valor_plano: number
+        }
+        Insert: {
+          apelido?: string | null
+          created_at?: string
+          data_entrada?: string
+          data_nascimento?: string | null
+          foto_url?: string | null
+          id?: string
+          nome: string
+          status?: Database["public"]["Enums"]["status_participante"]
+          telefone?: string | null
+          tipo_plano?: Database["public"]["Enums"]["tipo_plano"]
+          updated_at?: string
+          user_id: string
+          valor_plano?: number
+        }
+        Update: {
+          apelido?: string | null
+          created_at?: string
+          data_entrada?: string
+          data_nascimento?: string | null
+          foto_url?: string | null
+          id?: string
+          nome?: string
+          status?: Database["public"]["Enums"]["status_participante"]
+          telefone?: string | null
+          tipo_plano?: Database["public"]["Enums"]["tipo_plano"]
+          updated_at?: string
+          user_id?: string
+          valor_plano?: number
+        }
+        Relationships: []
+      }
+      receitas: {
+        Row: {
+          categoria: string
+          created_at: string
+          data: string
+          descricao: string
+          id: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          categoria?: string
+          created_at?: string
+          data?: string
+          descricao: string
+          id?: string
+          user_id: string
+          valor: number
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          data?: string
+          descricao?: string
+          id?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +180,17 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      categoria_gasto:
+        | "quadra"
+        | "material"
+        | "uniformes"
+        | "agua_gelo"
+        | "confraternizacao"
+        | "manutencao"
+        | "outros"
+      forma_pagamento: "pix" | "dinheiro" | "cartao" | "transferencia"
+      status_participante: "ativo" | "inativo"
+      tipo_plano: "mensalista" | "anual" | "avulso"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +317,19 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      categoria_gasto: [
+        "quadra",
+        "material",
+        "uniformes",
+        "agua_gelo",
+        "confraternizacao",
+        "manutencao",
+        "outros",
+      ],
+      forma_pagamento: ["pix", "dinheiro", "cartao", "transferencia"],
+      status_participante: ["ativo", "inativo"],
+      tipo_plano: ["mensalista", "anual", "avulso"],
+    },
   },
 } as const
