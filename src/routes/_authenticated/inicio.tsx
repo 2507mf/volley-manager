@@ -133,7 +133,7 @@ function Inicio() {
           icon={<Users className="size-4" />}
           titulo="Participantes cadastrados"
           valor={String(dados.total)}
-          nota={`${dados.ativos.length} ativos · ${dados.mensalistas.length} mensalistas`}
+          nota={`${dados.mensalistas.length} mensalistas`}
         />
         <StatCard
           icon={<CircleCheck className="size-4 text-success" />}
