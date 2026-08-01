@@ -251,6 +251,91 @@ function Financeiro() {
         </Card>
       </div>
 
+      <Tabs defaultValue="gastos">
+        <TabsList className="w-full">
+          <TabsTrigger value="gastos" className="flex-1">
+            Saídas
+          </TabsTrigger>
+          <TabsTrigger value="receitas" className="flex-1">
+            Outras entradas
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="gastos" className="space-y-3">
+          <FormGasto onSave={(v) => salvarGasto.mutateAsync(v)} />
+          {gastosFiltrados.length === 0 && <SemLancamentos />}
+          {gastosFiltrados.map((g) => (
+            <Card key={g.id}>
+              <CardContent className="flex items-center gap-3 p-3">
+                {g.comprovante_url ? (
+                  <ArquivoImg
+                    path={g.comprovante_url}
+                    alt="Comprovante"
+                    className="size-11 rounded-lg border object-cover"
+                  />
+                ) : (
+                  <span className="flex size-11 items-center justify-center rounded-lg bg-muted">
+                    <Paperclip className="size-4 text-muted-foreground" />
+                  </span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{g.descricao}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {formatDate(g.data)} · {labelCategoriaGasto(g.categoria)}
+                    {g.responsavel ? ` · ${g.responsavel}` : ""}
+                  </p>
+                </div>
+                <span className="stat-num shrink-0 text-sm text-destructive">
+                  -{brl(Number(g.valor))}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Excluir gasto"
+                  onClick={async () => {
+                    await excluirGasto.mutateAsync(g.id);
+                    toast.success("Gasto removido.");
+                  }}
+                >
+                  <Trash2 className="size-4 text-destructive" />
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </TabsContent>
+
+        <TabsContent value="receitas" className="space-y-3">
+          <FormReceita onSave={(v) => salvarReceita.mutateAsync(v)} />
+          {receitasFiltradas.length === 0 && <SemLancamentos />}
+          {receitasFiltradas.map((r) => (
+            <Card key={r.id}>
+              <CardContent className="flex items-center gap-3 p-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{r.descricao}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {formatDate(r.data)} · {r.categoria ?? "Outras"}
+                  </p>
+                </div>
+                <Badge variant="secondary" className="stat-num text-success">
+                  +{brl(Number(r.valor))}
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Excluir receita"
+                  onClick={async () => {
+                    await excluirReceita.mutateAsync(r.id);
+                    toast.success("Receita removida.");
+                  }}
+                >
+                  <Trash2 className="size-4 text-destructive" />
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </TabsContent>
+      </Tabs>
+
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -357,91 +442,6 @@ function Financeiro() {
           </CardContent>
         </Card>
       </div>
-
-      <Tabs defaultValue="gastos">
-        <TabsList className="w-full">
-          <TabsTrigger value="gastos" className="flex-1">
-            Saídas
-          </TabsTrigger>
-          <TabsTrigger value="receitas" className="flex-1">
-            Outras entradas
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="gastos" className="space-y-3">
-          <FormGasto onSave={(v) => salvarGasto.mutateAsync(v)} />
-          {gastosFiltrados.length === 0 && <SemLancamentos />}
-          {gastosFiltrados.map((g) => (
-            <Card key={g.id}>
-              <CardContent className="flex items-center gap-3 p-3">
-                {g.comprovante_url ? (
-                  <ArquivoImg
-                    path={g.comprovante_url}
-                    alt="Comprovante"
-                    className="size-11 rounded-lg border object-cover"
-                  />
-                ) : (
-                  <span className="flex size-11 items-center justify-center rounded-lg bg-muted">
-                    <Paperclip className="size-4 text-muted-foreground" />
-                  </span>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{g.descricao}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {formatDate(g.data)} · {labelCategoriaGasto(g.categoria)}
-                    {g.responsavel ? ` · ${g.responsavel}` : ""}
-                  </p>
-                </div>
-                <span className="stat-num shrink-0 text-sm text-destructive">
-                  -{brl(Number(g.valor))}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Excluir gasto"
-                  onClick={async () => {
-                    await excluirGasto.mutateAsync(g.id);
-                    toast.success("Gasto removido.");
-                  }}
-                >
-                  <Trash2 className="size-4 text-destructive" />
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </TabsContent>
-
-        <TabsContent value="receitas" className="space-y-3">
-          <FormReceita onSave={(v) => salvarReceita.mutateAsync(v)} />
-          {receitasFiltradas.length === 0 && <SemLancamentos />}
-          {receitasFiltradas.map((r) => (
-            <Card key={r.id}>
-              <CardContent className="flex items-center gap-3 p-3">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{r.descricao}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {formatDate(r.data)} · {r.categoria ?? "Outras"}
-                  </p>
-                </div>
-                <Badge variant="secondary" className="stat-num text-success">
-                  +{brl(Number(r.valor))}
-                </Badge>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Excluir receita"
-                  onClick={async () => {
-                    await excluirReceita.mutateAsync(r.id);
-                    toast.success("Receita removida.");
-                  }}
-                >
-                  <Trash2 className="size-4 text-destructive" />
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </TabsContent>
-      </Tabs>
 
       <p className="pb-2 text-center text-xs text-muted-foreground">
         {filtroMes === "todos"
