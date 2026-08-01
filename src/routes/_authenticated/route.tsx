@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, redirect, useNavigate } from "@tanstack/react-router";
-import { Home, Users, Wallet, Receipt, Settings, Volleyball, Moon, Sun, LogOut } from "lucide-react";
+import { Home, Users, Wallet, Receipt, Settings, Moon, Sun, LogOut } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useTheme } from "@/hooks/useTheme";
@@ -37,9 +37,7 @@ function AppLayout() {
       <header className="sticky top-0 z-30 border-b bg-card/90 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3">
           <Link to="/inicio" className="flex items-center gap-2">
-            <span className="court-stripe flex size-9 items-center justify-center rounded-lg">
-              <Volleyball className="size-5 text-primary-foreground" />
-            </span>
+            <img src="/logo.png" alt="VÔLEI 6" className="size-9 object-contain" />
             <span className="font-display text-xl font-bold uppercase tracking-wide">
               VÔLEI 6
             </span>

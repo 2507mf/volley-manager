@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   ArrowDownRight,
   ArrowUpRight,
   Download,
   Plus,
+  Pencil,
   Trash2,
   Wallet,
   Paperclip,
@@ -38,6 +39,7 @@ import {
   useSaveGasto,
   useSaveReceita,
   type CategoriaGasto,
+  type Gasto,
 } from "@/lib/pelada";
 import { brl, formatDate, monthKey, monthLabel, todayISO } from "@/lib/format";
 import { baixarCSV } from "@/lib/status";
@@ -296,6 +298,16 @@ function Financeiro() {
                 <span className="stat-num shrink-0 text-sm text-destructive">
                   -{brl(Number(g.valor))}
                 </span>
+                <FormGasto
+                  gasto={g}
+                  categorias={categoriasGasto}
+                  onSave={(v) => salvarGasto.mutateAsync(v)}
+                  trigger={
+                    <Button variant="ghost" size="icon" aria-label="Editar gasto">
+                      <Pencil className="size-4" />
+                    </Button>
+                  }
+                />
                 <Button
                   variant="ghost"
                   size="icon"
@@ -463,8 +475,11 @@ function Financeiro() {
 function FormGasto({
   onSave,
   categorias,
+  gasto,
+  trigger,
 }: {
   onSave: (v: {
+    id?: string;
     descricao: string;
     valor: number;
     categoria: CategoriaGasto;
@@ -473,16 +488,19 @@ function FormGasto({
     comprovante_url: string | null;
   }) => Promise<unknown>;
   categorias: string[];
+  gasto?: Gasto;
+  trigger?: ReactNode;
 }) {
+  const editando = !!gasto;
   const [aberto, setAberto] = useState(false);
-  const [descricao, setDescricao] = useState("");
-  const [valor, setValor] = useState("");
-  const [categoria, setCategoria] = useState<CategoriaGasto>("quadra");
+  const [descricao, setDescricao] = useState(gasto?.descricao ?? "");
+  const [valor, setValor] = useState(gasto ? String(gasto.valor) : "");
+  const [categoria, setCategoria] = useState<CategoriaGasto>(gasto?.categoria ?? "quadra");
   const [criandoCategoria, setCriandoCategoria] = useState(false);
   const [novaCategoria, setNovaCategoria] = useState("");
-  const [data, setData] = useState(todayISO());
-  const [responsavel, setResponsavel] = useState("");
-  const [comprovante, setComprovante] = useState<string | null>(null);
+  const [data, setData] = useState(gasto?.data ?? todayISO());
+  const [responsavel, setResponsavel] = useState(gasto?.responsavel ?? "");
+  const [comprovante, setComprovante] = useState<string | null>(gasto?.comprovante_url ?? null);
 
   const salvar = async () => {
     const v = Number(valor.replace(",", "."));
@@ -496,6 +514,7 @@ function FormGasto({
       return;
     }
     await onSave({
+      ...(gasto ? { id: gasto.id } : {}),
       descricao: descricao.trim().slice(0, 120),
       valor: v,
       categoria: categoriaFinal.slice(0, 40),
@@ -503,27 +522,31 @@ function FormGasto({
       responsavel: responsavel.trim() || null,
       comprovante_url: comprovante,
     });
-    toast.success("Gasto registrado!");
+    toast.success(editando ? "Gasto atualizado!" : "Gasto registrado!");
     setAberto(false);
-    setDescricao("");
-    setValor("");
-    setResponsavel("");
-    setComprovante(null);
     setCriandoCategoria(false);
     setNovaCategoria("");
-    setCategoria("quadra");
+    if (!editando) {
+      setDescricao("");
+      setValor("");
+      setResponsavel("");
+      setComprovante(null);
+      setCategoria("quadra");
+    }
   };
 
   return (
     <Dialog open={aberto} onOpenChange={setAberto}>
       <DialogTrigger asChild>
-        <Button className="w-full">
-          <Plus className="size-4" /> Novo gasto
-        </Button>
+        {trigger ?? (
+          <Button className="w-full">
+            <Plus className="size-4" /> Novo gasto
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Novo gasto</DialogTitle>
+          <DialogTitle>{editando ? "Editar gasto" : "Novo gasto"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">
@@ -613,7 +636,7 @@ function FormGasto({
           <Button variant="outline" onClick={() => setAberto(false)}>
             Cancelar
           </Button>
-          <Button onClick={salvar}>Salvar gasto</Button>
+          <Button onClick={salvar}>{editando ? "Salvar alterações" : "Salvar gasto"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

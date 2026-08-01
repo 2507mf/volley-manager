@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Volleyball, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -96,9 +96,7 @@ function AuthPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-8 bg-background px-5 py-10">
       <div className="flex flex-col items-center gap-3 text-center">
-        <div className="court-stripe flex size-16 items-center justify-center rounded-2xl">
-          <Volleyball className="size-9 text-primary-foreground" />
-        </div>
+        <img src="/logo.png" alt="VÔLEI 6" className="size-24 object-contain" />
         <div>
           <h1 className="text-4xl leading-none">VÔLEI 6</h1>
           <p className="mt-1 text-sm text-muted-foreground">
