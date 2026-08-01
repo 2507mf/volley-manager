@@ -20,7 +20,13 @@ export function ArquivoImg({
   return <img src={url} alt={alt} loading="lazy" className={className} />;
 }
 
-export function Iniciais({ nome, className }: { nome: string; className?: string }) {
+export function Iniciais({
+  nome,
+  className,
+}: {
+  nome: string;
+  className?: string | undefined;
+}) {
   const iniciais = nome
     .split(" ")
     .filter(Boolean)
