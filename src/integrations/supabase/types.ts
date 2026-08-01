@@ -16,7 +16,7 @@ export type Database = {
     Tables: {
       gastos: {
         Row: {
-          categoria: Database["public"]["Enums"]["categoria_gasto"]
+          categoria: string
           comprovante_url: string | null
           created_at: string
           data: string
@@ -27,7 +27,7 @@ export type Database = {
           valor: number
         }
         Insert: {
-          categoria?: Database["public"]["Enums"]["categoria_gasto"]
+          categoria?: string
           comprovante_url?: string | null
           created_at?: string
           data?: string
@@ -38,7 +38,7 @@ export type Database = {
           valor: number
         }
         Update: {
-          categoria?: Database["public"]["Enums"]["categoria_gasto"]
+          categoria?: string
           comprovante_url?: string | null
           created_at?: string
           data?: string

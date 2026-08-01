@@ -86,6 +86,8 @@ const CORES = [
   "var(--chart-7)",
 ];
 
+const NOVA_CATEGORIA = "__nova__";
+
 function Financeiro() {
   const gastos = useGastos();
   const receitas = useReceitas();
@@ -148,6 +150,12 @@ function Financeiro() {
       .map(([categoria, valor]) => ({ nome: labelCategoriaGasto(categoria), valor }))
       .sort((a, b) => b.valor - a.valor);
   }, [gastosFiltrados]);
+
+  const categoriasGasto = useMemo(() => {
+    const set = new Set<string>(CATEGORIAS_GASTO.map((c) => c.value));
+    listaGastos.forEach((g) => set.add(g.categoria));
+    return [...set];
+  }, [listaGastos]);
 
   const porMes = useMemo(() => {
     const mapa = new Map<string, { mes: string; entradas: number; saidas: number }>();
@@ -262,7 +270,7 @@ function Financeiro() {
         </TabsList>
 
         <TabsContent value="gastos" className="space-y-3">
-          <FormGasto onSave={(v) => salvarGasto.mutateAsync(v)} />
+          <FormGasto onSave={(v) => salvarGasto.mutateAsync(v)} categorias={categoriasGasto} />
           {gastosFiltrados.length === 0 && <SemLancamentos />}
           {gastosFiltrados.map((g) => (
             <Card key={g.id}>
@@ -454,6 +462,7 @@ function Financeiro() {
 
 function FormGasto({
   onSave,
+  categorias,
 }: {
   onSave: (v: {
     descricao: string;
@@ -463,11 +472,14 @@ function FormGasto({
     responsavel: string | null;
     comprovante_url: string | null;
   }) => Promise<unknown>;
+  categorias: string[];
 }) {
   const [aberto, setAberto] = useState(false);
   const [descricao, setDescricao] = useState("");
   const [valor, setValor] = useState("");
   const [categoria, setCategoria] = useState<CategoriaGasto>("quadra");
+  const [criandoCategoria, setCriandoCategoria] = useState(false);
+  const [novaCategoria, setNovaCategoria] = useState("");
   const [data, setData] = useState(todayISO());
   const [responsavel, setResponsavel] = useState("");
   const [comprovante, setComprovante] = useState<string | null>(null);
@@ -478,10 +490,15 @@ function FormGasto({
       toast.error("Preencha descrição e valor válidos.");
       return;
     }
+    const categoriaFinal = criandoCategoria ? novaCategoria.trim() : categoria;
+    if (criandoCategoria && categoriaFinal.length < 2) {
+      toast.error("Dê um nome para a nova categoria.");
+      return;
+    }
     await onSave({
       descricao: descricao.trim().slice(0, 120),
       valor: v,
-      categoria,
+      categoria: categoriaFinal.slice(0, 40),
       data,
       responsavel: responsavel.trim() || null,
       comprovante_url: comprovante,
@@ -492,6 +509,9 @@ function FormGasto({
     setValor("");
     setResponsavel("");
     setComprovante(null);
+    setCriandoCategoria(false);
+    setNovaCategoria("");
+    setCategoria("quadra");
   };
 
   return (
@@ -519,18 +539,37 @@ function FormGasto({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Categoria</Label>
-              <Select value={categoria} onValueChange={(v) => setCategoria(v as CategoriaGasto)}>
+              <Select
+                value={criandoCategoria ? NOVA_CATEGORIA : categoria}
+                onValueChange={(v) => {
+                  if (v === NOVA_CATEGORIA) {
+                    setCriandoCategoria(true);
+                  } else {
+                    setCriandoCategoria(false);
+                    setCategoria(v);
+                  }
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORIAS_GASTO.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      {c.label}
+                  {categorias.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {labelCategoriaGasto(c)}
                     </SelectItem>
                   ))}
+                  <SelectItem value={NOVA_CATEGORIA}>+ Criar nova categoria</SelectItem>
                 </SelectContent>
               </Select>
+              {criandoCategoria && (
+                <Input
+                  value={novaCategoria}
+                  onChange={(e) => setNovaCategoria(e.target.value)}
+                  placeholder="Nome da nova categoria"
+                  maxLength={40}
+                />
+              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="valor-gasto">Valor (R$)</Label>

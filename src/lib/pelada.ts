@@ -8,7 +8,7 @@ export type Gasto = Tables<"gastos">;
 export type Receita = Tables<"receitas">;
 export type TipoPlano = Enums<"tipo_plano">;
 export type FormaPagamento = Enums<"forma_pagamento">;
-export type CategoriaGasto = Enums<"categoria_gasto">;
+export type CategoriaGasto = string;
 
 export const CATEGORIAS_GASTO: { value: CategoriaGasto; label: string }[] = [
   { value: "quadra", label: "Aluguel de quadra" },
