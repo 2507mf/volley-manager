@@ -13,7 +13,7 @@ export function ArquivoImg({
 }: {
   path?: string | null;
   alt: string;
-  className?: string;
+  className?: string | undefined;
 }) {
   const { data: url } = useArquivoUrl(path);
   if (!url) return null;
@@ -46,7 +46,7 @@ export function AvatarParticipante({
 }: {
   nome: string;
   foto?: string | null;
-  className?: string;
+  className?: string | undefined;
 }) {
   const { data: url } = useArquivoUrl(foto);
   if (foto && url) {
