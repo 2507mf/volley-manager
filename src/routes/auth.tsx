@@ -48,7 +48,7 @@ function AuthPage() {
       return;
     }
     setLoading(true);
-    const { error } =
+    const { data, error } =
       mode === "login"
         ? await supabase.auth.signInWithPassword({ email: parsed.data.email, password: parsed.data.senha })
         : await supabase.auth.signUp({
@@ -56,10 +56,25 @@ function AuthPage() {
             password: parsed.data.senha,
             options: { emailRedirectTo: window.location.origin },
           });
-    setLoading(false);
     if (error) {
+      setLoading(false);
       toast.error(error.message);
       return;
+    }
+    // Após o cadastro, se a confirmação de e-mail estiver desativada, já entra direto.
+    // Caso o cadastro não retorne sessão, tenta logar em seguida.
+    if (!data.session) {
+      const { error: loginError } = await supabase.auth.signInWithPassword({
+        email: parsed.data.email,
+        password: parsed.data.senha,
+      });
+      setLoading(false);
+      if (loginError) {
+        toast.error("Conta criada, mas é preciso confirmar o e-mail antes de entrar.");
+        return;
+      }
+    } else {
+      setLoading(false);
     }
     navigate({ to: "/inicio" });
   };
