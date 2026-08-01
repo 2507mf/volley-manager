@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -79,20 +78,6 @@ function AuthPage() {
     navigate({ to: "/inicio" });
   };
 
-  const google = async () => {
-    setLoading(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      setLoading(false);
-      toast.error("Não foi possível entrar com o Google.");
-      return;
-    }
-    if (result.redirected) return;
-    navigate({ to: "/inicio" });
-  };
-
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-8 bg-background px-5 py-10">
       <div className="flex flex-col items-center gap-3 text-center">
@@ -143,16 +128,6 @@ function AuthPage() {
             </TabsContent>
           ))}
         </Tabs>
-
-        <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="h-px flex-1 bg-border" />
-          ou
-          <span className="h-px flex-1 bg-border" />
-        </div>
-
-        <Button variant="outline" className="w-full" disabled={loading} onClick={google}>
-          Continuar com o Google
-        </Button>
       </div>
     </main>
   );
