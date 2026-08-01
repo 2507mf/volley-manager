@@ -19,7 +19,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -296,15 +295,6 @@ function Participantes() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="entrada">Entrou na pelada em</Label>
-                <Input
-                  id="entrada"
-                  type="date"
-                  value={form.data_entrada}
-                  onChange={(e) => setForm({ ...form, data_entrada: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
                 <Label>Plano</Label>
                 <Select
                   value={form.tipo_plano}
@@ -341,19 +331,6 @@ function Participantes() {
                 onChange={(path) => setForm({ ...form, foto_url: path })}
                 pasta="fotos"
                 label="Adicionar foto"
-              />
-            </div>
-
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <p className="text-sm font-medium">Participante ativo</p>
-                <p className="text-xs text-muted-foreground">
-                  Inativos não entram no controle de mensalidades.
-                </p>
-              </div>
-              <Switch
-                checked={form.status}
-                onCheckedChange={(v) => setForm({ ...form, status: v })}
               />
             </div>
           </div>

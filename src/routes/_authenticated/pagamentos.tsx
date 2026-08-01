@@ -89,7 +89,6 @@ function Pagamentos() {
   const pags = pagamentos.data ?? [];
   const ins = inscricoes.data ?? [];
 
-  const mensalistas = ativos.filter((p) => p.tipo_plano === "mensalista");
   const anuais = ativos.filter((p) => p.tipo_plano === "anual");
 
   const mapPart = useMemo(() => new Map(parts.map((p) => [p.id, p])), [parts]);
@@ -111,8 +110,11 @@ function Pagamentos() {
   );
 
   const naoInscritos = useMemo(
-    () => mensalistas.filter((p) => !inscritosMes.some((x) => x.participante.id === p.id)),
-    [mensalistas, inscritosMes],
+    () =>
+      parts
+        .filter((p) => p.tipo_plano !== "anual")
+        .filter((p) => !inscritosMes.some((x) => x.participante.id === p.id)),
+    [parts, inscritosMes],
   );
 
   const resumoMes = useMemo(() => {
@@ -364,7 +366,7 @@ function Pagamentos() {
           <div className="max-h-[50vh] space-y-1.5 overflow-y-auto">
             {naoInscritos.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                Todos os mensalistas ativos já estão neste mês.
+                Todos os participantes já estão neste mês.
               </p>
             ) : (
               naoInscritos.map((p) => (
