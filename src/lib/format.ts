@@ -29,7 +29,7 @@ export const monthLabel = (key: string) => {
 export const parseDate = (s?: string | null) => {
   if (!s) return null;
   const [y, m, d] = s.slice(0, 10).split("-").map(Number);
-  return new Date(y, (m ?? 1) - 1, d ?? 1);
+  return new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
 };
 
 export const formatDate = (s?: string | null) => {
