@@ -6,6 +6,7 @@ export type Participante = Tables<"participantes">;
 export type Pagamento = Tables<"pagamentos">;
 export type Gasto = Tables<"gastos">;
 export type Receita = Tables<"receitas">;
+export type Inscricao = Tables<"inscricoes_mensais">;
 export type TipoPlano = Enums<"tipo_plano">;
 export type FormaPagamento = Enums<"forma_pagamento">;
 export type CategoriaGasto = string;
@@ -130,6 +131,49 @@ export function useDeletePagamento() {
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("pagamentos").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries(),
+  });
+}
+
+/* -------------------------- inscrições mensais ------------------------- */
+
+export function useInscricoes() {
+  return useQuery({
+    queryKey: ["inscricoes"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inscricoes_mensais").select("*");
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useAddInscricoes() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { participanteIds: string[]; referencia: string }) => {
+      const userId = await uid();
+      const rows = input.participanteIds.map((participante_id) => ({
+        user_id: userId,
+        participante_id,
+        referencia: input.referencia,
+      }));
+      const { error } = await supabase
+        .from("inscricoes_mensais")
+        .upsert(rows, { onConflict: "participante_id,referencia" });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries(),
+  });
+}
+
+export function useRemoveInscricao() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("inscricoes_mensais").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries(),

@@ -50,6 +50,38 @@ export type Database = {
         }
         Relationships: []
       }
+      inscricoes_mensais: {
+        Row: {
+          created_at: string
+          id: string
+          participante_id: string
+          referencia: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          participante_id: string
+          referencia: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          participante_id?: string
+          referencia?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inscricoes_mensais_participante_id_fkey"
+            columns: ["participante_id"]
+            isOneToOne: false
+            referencedRelation: "participantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pagamentos: {
         Row: {
           created_at: string

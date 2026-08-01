@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { Cake, CircleAlert, CircleCheck, TrendingUp, Users, CalendarClock } from "lucide-react";
 
-import { useGastos, usePagamentos, useParticipantes, useReceitas } from "@/lib/pelada";
+import { useGastos, useInscricoes, usePagamentos, useParticipantes, useReceitas } from "@/lib/pelada";
 import { brl, formatDayMonth, monthKey, monthLabel, parseDate } from "@/lib/format";
 import { cicloAnual, diasParaAniversario, statusAnual, statusMensalista } from "@/lib/status";
 import { AvatarParticipante } from "@/components/foto";
@@ -25,21 +25,30 @@ export const Route = createFileRoute("/_authenticated/inicio")({
 function Inicio() {
   const participantes = useParticipantes();
   const pagamentos = usePagamentos();
+  const inscricoes = useInscricoes();
   const gastos = useGastos();
   const receitas = useReceitas();
 
   const carregando =
-    participantes.isLoading || pagamentos.isLoading || gastos.isLoading || receitas.isLoading;
+    participantes.isLoading ||
+    pagamentos.isLoading ||
+    inscricoes.isLoading ||
+    gastos.isLoading ||
+    receitas.isLoading;
 
   const dados = useMemo(() => {
     const parts = participantes.data ?? [];
     const pags = pagamentos.data ?? [];
+    const ins = inscricoes.data ?? [];
     const mes = monthKey(new Date());
     const ativos = parts.filter((p) => p.status === "ativo");
 
     const mensalistas = ativos.filter((p) => p.tipo_plano === "mensalista");
-    const emDia = mensalistas.filter((p) => statusMensalista(pags, p.id, mes) === "pago").length;
-    const atrasados = mensalistas.filter(
+    const inscritos = mensalistas.filter((p) =>
+      ins.some((i) => i.referencia === mes && i.participante_id === p.id),
+    );
+    const emDia = inscritos.filter((p) => statusMensalista(pags, p.id, mes) === "pago").length;
+    const atrasados = inscritos.filter(
       (p) => statusMensalista(pags, p.id, mes) === "atrasado",
     ).length;
 
@@ -74,6 +83,7 @@ function Inicio() {
     return {
       ativos,
       mensalistas,
+      inscritos: inscritos.length,
       emDia,
       atrasados,
       anuaisAtrasados,
@@ -85,7 +95,7 @@ function Inicio() {
       vencimentos,
       mes,
     };
-  }, [participantes.data, pagamentos.data, gastos.data, receitas.data]);
+  }, [participantes.data, pagamentos.data, gastos.data, receitas.data, inscricoes.data]);
 
   if (carregando) {
     return (
@@ -127,8 +137,8 @@ function Inicio() {
         <StatCard
           icon={<CircleCheck className="size-4 text-success" />}
           titulo="Mensalistas em dia"
-          valor={`${dados.emDia}/${dados.mensalistas.length}`}
-          nota="No mês atual"
+          valor={`${dados.emDia}/${dados.inscritos}`}
+          nota="Inscritos no mês"
         />
         <StatCard
           icon={<CircleAlert className="size-4 text-destructive" />}
