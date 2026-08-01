@@ -82,6 +82,7 @@ function Inicio() {
 
     return {
       ativos,
+      total: parts.length,
       mensalistas,
       inscritos: inscritos.length,
       emDia,
@@ -130,9 +131,9 @@ function Inicio() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={<Users className="size-4" />}
-          titulo="Participantes ativos"
-          valor={String(dados.ativos.length)}
-          nota={`${dados.mensalistas.length} mensalistas`}
+          titulo="Participantes cadastrados"
+          valor={String(dados.total)}
+          nota={`${dados.ativos.length} ativos · ${dados.mensalistas.length} mensalistas`}
         />
         <StatCard
           icon={<CircleCheck className="size-4 text-success" />}
