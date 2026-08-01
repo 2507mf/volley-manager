@@ -25,7 +25,7 @@ export const Route = createFileRoute("/_authenticated/configuracoes")({
 });
 
 function Configuracoes() {
-  const { theme, setTheme } = useTheme();
+  const { theme, toggle } = useTheme();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
 
@@ -104,7 +104,7 @@ function Configuracoes() {
             </div>
             <Switch
               checked={theme === "dark"}
-              onCheckedChange={(v) => setTheme(v ? "dark" : "light")}
+              onCheckedChange={() => toggle()}
             />
           </div>
         </CardContent>

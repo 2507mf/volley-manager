@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated/inicio'
 import { Route as AuthenticatedPagamentosRouteImport } from './routes/_authenticated/pagamentos'
@@ -31,6 +32,12 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedConfiguracoesRoute =
+  AuthenticatedConfiguracoesRouteImport.update({
+    id: '/configuracoes',
+    path: '/configuracoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedFinanceiroRoute = AuthenticatedFinanceiroRouteImport.update({
   id: '/financeiro',
   path: '/financeiro',
@@ -56,6 +63,7 @@ const AuthenticatedParticipantesRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/inicio': typeof AuthenticatedInicioRoute
   '/pagamentos': typeof AuthenticatedPagamentosRoute
@@ -64,6 +72,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/inicio': typeof AuthenticatedInicioRoute
   '/pagamentos': typeof AuthenticatedPagamentosRoute
@@ -74,6 +83,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/inicio': typeof AuthenticatedInicioRoute
   '/_authenticated/pagamentos': typeof AuthenticatedPagamentosRoute
@@ -82,15 +92,28 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/auth' | '/financeiro' | '/inicio' | '/pagamentos' | '/participantes'
+    | '/'
+    | '/auth'
+    | '/configuracoes'
+    | '/financeiro'
+    | '/inicio'
+    | '/pagamentos'
+    | '/participantes'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/auth' | '/financeiro' | '/inicio' | '/pagamentos' | '/participantes'
+    | '/'
+    | '/auth'
+    | '/configuracoes'
+    | '/financeiro'
+    | '/inicio'
+    | '/pagamentos'
+    | '/participantes'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/configuracoes'
     | '/_authenticated/financeiro'
     | '/_authenticated/inicio'
     | '/_authenticated/pagamentos'
@@ -126,6 +149,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/configuracoes': {
+      id: '/_authenticated/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof AuthenticatedConfiguracoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/financeiro': {
       id: '/_authenticated/financeiro'
       path: '/financeiro'
@@ -158,6 +188,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
   AuthenticatedInicioRoute: typeof AuthenticatedInicioRoute
   AuthenticatedPagamentosRoute: typeof AuthenticatedPagamentosRoute
@@ -165,6 +196,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
   AuthenticatedInicioRoute: AuthenticatedInicioRoute,
   AuthenticatedPagamentosRoute: AuthenticatedPagamentosRoute,
