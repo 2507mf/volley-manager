@@ -336,7 +336,7 @@ function Financeiro() {
                     {formatDate(r.data)} · {r.categoria ?? "Outras"}
                   </p>
                 </div>
-                <Badge variant="secondary" className="stat-num text-success">
+                <Badge variant="secondary" className="stat-num text-white">
                   +{brl(Number(r.valor))}
                 </Badge>
                 <Button
