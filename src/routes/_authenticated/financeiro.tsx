@@ -67,9 +67,9 @@ import {
 export const Route = createFileRoute("/_authenticated/financeiro")({
   head: () => ({
     meta: [
-      { title: "Financeiro — Pelada Manager" },
+      { title: "Financeiro — VÔLEI 6" },
       { name: "description", content: "Entradas, saídas, saldo em caixa e relatórios da pelada." },
-      { property: "og:title", content: "Financeiro — Pelada Manager" },
+      { property: "og:title", content: "Financeiro — VÔLEI 6" },
       { property: "og:description", content: "Entradas, saídas, saldo em caixa e relatórios da pelada." },
     ],
   }),
@@ -99,10 +99,37 @@ function Financeiro() {
   const listaReceitas = receitas.data ?? [];
   const listaPagamentos = pagamentos.data ?? [];
 
+  const [filtroMes, setFiltroMes] = useState<string>(monthKey(new Date()));
+
+  const mesesDisponiveis = useMemo(() => {
+    const set = new Set<string>();
+    set.add(monthKey(new Date()));
+    listaPagamentos.forEach((p) => set.add(p.data_pagamento.slice(0, 7)));
+    listaReceitas.forEach((r) => set.add(r.data.slice(0, 7)));
+    listaGastos.forEach((g) => set.add(g.data.slice(0, 7)));
+    return [...set].sort((a, b) => b.localeCompare(a));
+  }, [listaPagamentos, listaReceitas, listaGastos]);
+
+  const gastosFiltrados = useMemo(
+    () => listaGastos.filter((g) => filtroMes === "todos" || g.data.slice(0, 7) === filtroMes),
+    [listaGastos, filtroMes],
+  );
+  const receitasFiltradas = useMemo(
+    () => listaReceitas.filter((r) => filtroMes === "todos" || r.data.slice(0, 7) === filtroMes),
+    [listaReceitas, filtroMes],
+  );
+  const pagamentosFiltrados = useMemo(
+    () =>
+      listaPagamentos.filter(
+        (p) => filtroMes === "todos" || p.data_pagamento.slice(0, 7) === filtroMes,
+      ),
+    [listaPagamentos, filtroMes],
+  );
+
   const totais = useMemo(() => {
-    const entradasPag = listaPagamentos.reduce((s, p) => s + Number(p.valor), 0);
-    const entradasOutras = listaReceitas.reduce((s, r) => s + Number(r.valor), 0);
-    const saidas = listaGastos.reduce((s, g) => s + Number(g.valor), 0);
+    const entradasPag = pagamentosFiltrados.reduce((s, p) => s + Number(p.valor), 0);
+    const entradasOutras = receitasFiltradas.reduce((s, r) => s + Number(r.valor), 0);
+    const saidas = gastosFiltrados.reduce((s, g) => s + Number(g.valor), 0);
     return {
       entradas: entradasPag + entradasOutras,
       entradasPag,
@@ -110,17 +137,17 @@ function Financeiro() {
       saidas,
       saldo: entradasPag + entradasOutras - saidas,
     };
-  }, [listaPagamentos, listaReceitas, listaGastos]);
+  }, [pagamentosFiltrados, receitasFiltradas, gastosFiltrados]);
 
   const porCategoria = useMemo(() => {
     const mapa = new Map<CategoriaGasto, number>();
-    listaGastos.forEach((g) =>
+    gastosFiltrados.forEach((g) =>
       mapa.set(g.categoria, (mapa.get(g.categoria) ?? 0) + Number(g.valor)),
     );
     return [...mapa.entries()]
       .map(([categoria, valor]) => ({ nome: labelCategoriaGasto(categoria), valor }))
       .sort((a, b) => b.valor - a.valor);
-  }, [listaGastos]);
+  }, [gastosFiltrados]);
 
   const porMes = useMemo(() => {
     const mapa = new Map<string, { mes: string; entradas: number; saidas: number }>();
@@ -147,33 +174,49 @@ function Financeiro() {
 
   const exportar = () => {
     const linhas: (string | number)[][] = [["Tipo", "Data", "Descrição", "Categoria", "Valor"]];
-    listaPagamentos.forEach((p) =>
+    pagamentosFiltrados.forEach((p) =>
       linhas.push(["Entrada", p.data_pagamento, `Mensalidade ${p.referencia}`, p.forma_pagamento, Number(p.valor)]),
     );
-    listaReceitas.forEach((r) =>
+    receitasFiltradas.forEach((r) =>
       linhas.push(["Entrada", r.data, r.descricao, r.categoria ?? "Outras", Number(r.valor)]),
     );
-    listaGastos.forEach((g) =>
+    gastosFiltrados.forEach((g) =>
       linhas.push(["Saída", g.data, g.descricao, labelCategoriaGasto(g.categoria), Number(g.valor)]),
     );
     linhas.push([]);
     linhas.push(["Total entradas", "", "", "", totais.entradas]);
     linhas.push(["Total saídas", "", "", "", totais.saidas]);
     linhas.push(["Saldo", "", "", "", totais.saldo]);
-    baixarCSV(`relatorio-pelada-${todayISO()}.csv`, linhas);
+    const sufixo = filtroMes === "todos" ? "geral" : filtroMes;
+    baixarCSV(`relatorio-pelada-${sufixo}.csv`, linhas);
     toast.success("Relatório exportado.");
   };
 
   return (
     <div className="space-y-5">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-3xl leading-none">Financeiro</h1>
           <p className="mt-1 text-sm text-muted-foreground">Entradas, saídas e saldo em caixa.</p>
         </div>
-        <Button variant="outline" onClick={exportar}>
-          <Download className="size-4" /> Relatório
-        </Button>
+        <div className="flex items-center gap-2">
+          <Select value={filtroMes} onValueChange={setFiltroMes}>
+            <SelectTrigger className="w-[170px]" aria-label="Filtrar por mês">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os meses</SelectItem>
+              {mesesDisponiveis.map((m) => (
+                <SelectItem key={m} value={m}>
+                  {monthLabel(m)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" onClick={exportar}>
+            <Download className="size-4" /> Relatório
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -194,7 +237,7 @@ function Financeiro() {
               <ArrowDownRight className="size-4 text-destructive" /> Saídas
             </p>
             <p className="stat-num mt-2 text-2xl text-destructive">{brl(totais.saidas)}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{listaGastos.length} lançamentos</p>
+            <p className="mt-1 text-xs text-muted-foreground">{gastosFiltrados.length} lançamentos</p>
           </CardContent>
         </Card>
         <Card className="border-primary/50 bg-primary/5">
@@ -327,8 +370,8 @@ function Financeiro() {
 
         <TabsContent value="gastos" className="space-y-3">
           <FormGasto onSave={(v) => salvarGasto.mutateAsync(v)} />
-          {listaGastos.length === 0 && <SemLancamentos />}
-          {listaGastos.map((g) => (
+          {gastosFiltrados.length === 0 && <SemLancamentos />}
+          {gastosFiltrados.map((g) => (
             <Card key={g.id}>
               <CardContent className="flex items-center gap-3 p-3">
                 {g.comprovante_url ? (
@@ -370,8 +413,8 @@ function Financeiro() {
 
         <TabsContent value="receitas" className="space-y-3">
           <FormReceita onSave={(v) => salvarReceita.mutateAsync(v)} />
-          {listaReceitas.length === 0 && <SemLancamentos />}
-          {listaReceitas.map((r) => (
+          {receitasFiltradas.length === 0 && <SemLancamentos />}
+          {receitasFiltradas.map((r) => (
             <Card key={r.id}>
               <CardContent className="flex items-center gap-3 p-3">
                 <div className="min-w-0 flex-1">
@@ -401,7 +444,9 @@ function Financeiro() {
       </Tabs>
 
       <p className="pb-2 text-center text-xs text-muted-foreground">
-        Resumo do mês corrente: {monthLabel(monthKey(new Date()))}
+        {filtroMes === "todos"
+          ? "Exibindo todos os lançamentos"
+          : `Exibindo: ${monthLabel(filtroMes)}`}
       </p>
     </div>
   );

@@ -47,9 +47,9 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/pagamentos")({
   head: () => ({
     meta: [
-      { title: "Pagamentos — Pelada Manager" },
+      { title: "Pagamentos — VÔLEI 6" },
       { name: "description", content: "Controle mensal e anual de quem já pagou a pelada." },
-      { property: "og:title", content: "Pagamentos — Pelada Manager" },
+      { property: "og:title", content: "Pagamentos — VÔLEI 6" },
       { property: "og:description", content: "Controle mensal e anual de quem já pagou a pelada." },
     ],
   }),

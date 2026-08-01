@@ -15,9 +15,9 @@ export const Route = createFileRoute("/auth")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Entrar — Pelada Manager" },
+      { title: "Entrar — VÔLEI 6" },
       { name: "description", content: "Acesse o painel de gestão da sua pelada de vôlei." },
-      { property: "og:title", content: "Entrar — Pelada Manager" },
+      { property: "og:title", content: "Entrar — VÔLEI 6" },
       { property: "og:description", content: "Acesse o painel de gestão da sua pelada de vôlei." },
     ],
   }),
@@ -85,7 +85,7 @@ function AuthPage() {
           <Volleyball className="size-9 text-primary-foreground" />
         </div>
         <div>
-          <h1 className="text-4xl leading-none">Pelada Manager</h1>
+          <h1 className="text-4xl leading-none">VÔLEI 6</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Vôlei, mensalidades e caixa no controle.
           </p>

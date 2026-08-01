@@ -49,9 +49,9 @@ import {
 export const Route = createFileRoute("/_authenticated/participantes")({
   head: () => ({
     meta: [
-      { title: "Participantes — Pelada Manager" },
+      { title: "Participantes — VÔLEI 6" },
       { name: "description", content: "Cadastro e gestão dos jogadores da pelada de vôlei." },
-      { property: "og:title", content: "Participantes — Pelada Manager" },
+      { property: "og:title", content: "Participantes — VÔLEI 6" },
       { property: "og:description", content: "Cadastro e gestão dos jogadores da pelada de vôlei." },
     ],
   }),

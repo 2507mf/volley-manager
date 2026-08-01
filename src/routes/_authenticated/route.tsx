@@ -41,7 +41,7 @@ function AppLayout() {
               <Volleyball className="size-5 text-primary-foreground" />
             </span>
             <span className="font-display text-xl font-bold uppercase tracking-wide">
-              Pelada Manager
+              VÔLEI 6
             </span>
           </Link>
 

@@ -15,9 +15,9 @@ import { Switch } from "@/components/ui/switch";
 export const Route = createFileRoute("/_authenticated/configuracoes")({
   head: () => ({
     meta: [
-      { title: "Configurações — Pelada Manager" },
+      { title: "Configurações — VÔLEI 6" },
       { name: "description", content: "Preferências da conta, tema e exportação de dados." },
-      { property: "og:title", content: "Configurações — Pelada Manager" },
+      { property: "og:title", content: "Configurações — VÔLEI 6" },
       { property: "og:description", content: "Preferências da conta, tema e exportação de dados." },
     ],
   }),

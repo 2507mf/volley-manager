@@ -13,9 +13,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 export const Route = createFileRoute("/_authenticated/inicio")({
   head: () => ({
     meta: [
-      { title: "Início — Pelada Manager" },
+      { title: "Início — VÔLEI 6" },
       { name: "description", content: "Resumo da pelada: caixa, mensalidades e aniversariantes." },
-      { property: "og:title", content: "Início — Pelada Manager" },
+      { property: "og:title", content: "Início — VÔLEI 6" },
       { property: "og:description", content: "Resumo da pelada: caixa, mensalidades e aniversariantes." },
     ],
   }),
