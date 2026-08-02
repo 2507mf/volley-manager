@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Cake, CircleAlert, CircleCheck, TrendingUp, Users, CalendarClock } from "lucide-react";
 
 import { useGastos, useInscricoes, usePagamentos, useParticipantes, useReceitas } from "@/lib/pelada";
@@ -8,6 +8,13 @@ import { cicloAnual, diasParaAniversario, statusAnual, statusMensalista } from "
 import { AvatarParticipante } from "@/components/foto";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/inicio")({
@@ -36,11 +43,23 @@ function Inicio() {
     gastos.isLoading ||
     receitas.isLoading;
 
+  const [mesSel, setMesSel] = useState(monthKey(new Date()));
+
+  const mesesDisponiveis = useMemo(() => {
+    const set = new Set<string>();
+    set.add(monthKey(new Date()));
+    (inscricoes.data ?? []).forEach((i) => set.add(i.referencia));
+    (pagamentos.data ?? []).forEach((p) => {
+      if (/^\d{4}-\d{2}$/.test(p.referencia)) set.add(p.referencia);
+    });
+    return [...set].sort((a, b) => b.localeCompare(a));
+  }, [inscricoes.data, pagamentos.data]);
+
   const dados = useMemo(() => {
     const parts = participantes.data ?? [];
     const pags = pagamentos.data ?? [];
     const ins = inscricoes.data ?? [];
-    const mes = monthKey(new Date());
+    const mes = mesSel;
     const ativos = parts.filter((p) => p.status === "ativo");
 
     const mensalistas = ativos.filter((p) => p.tipo_plano === "mensalista");
@@ -61,7 +80,7 @@ function Inicio() {
       (receitas.data ?? []).reduce((s, r) => s + Number(r.valor), 0);
     const saidas = (gastos.data ?? []).reduce((s, g) => s + Number(g.valor), 0);
 
-    const mesAtual = new Date().getMonth();
+    const mesAtual = Number(mes.split("-")[1]) - 1;
     const aniversariantes = ativos
       .filter((p) => parseDate(p.data_nascimento)?.getMonth() === mesAtual)
       .sort(
@@ -70,9 +89,11 @@ function Inicio() {
           (parseDate(b.data_nascimento)?.getDate() ?? 0),
       );
 
-    const hojeAniversario = aniversariantes.filter(
-      (p) => parseDate(p.data_nascimento)?.getDate() === new Date().getDate(),
-    );
+    const agora = new Date();
+    const hojeAniversario = ativos.filter((p) => {
+      const d = parseDate(p.data_nascimento);
+      return d && d.getMonth() === agora.getMonth() && d.getDate() === agora.getDate();
+    });
 
     const vencimentos = ativos
       .filter((p) => p.tipo_plano === "anual")
@@ -96,7 +117,7 @@ function Inicio() {
       vencimentos,
       mes,
     };
-  }, [participantes.data, pagamentos.data, gastos.data, receitas.data, inscricoes.data]);
+  }, [participantes.data, pagamentos.data, gastos.data, receitas.data, inscricoes.data, mesSel]);
 
   if (carregando) {
     return (
@@ -110,9 +131,23 @@ function Inicio() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl leading-none">Painel da pelada</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{monthLabel(dados.mes)}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl leading-none">Painel da pelada</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{monthLabel(mesSel)}</p>
+        </div>
+        <Select value={mesSel} onValueChange={setMesSel}>
+          <SelectTrigger className="w-[160px]" aria-label="Selecionar mês">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {mesesDisponiveis.map((m) => (
+              <SelectItem key={m} value={m}>
+                {monthLabel(m)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {dados.hojeAniversario.length > 0 && (

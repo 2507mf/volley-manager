@@ -182,6 +182,23 @@ function Financeiro() {
     });
   }, [listaPagamentos, listaReceitas, listaGastos]);
 
+  const porMesBar = useMemo(() => {
+    if (filtroMes === "todos") return porMes;
+    const entradas =
+      pagamentosFiltrados.reduce((s, p) => s + Number(p.valor), 0) +
+      receitasFiltradas.reduce((s, r) => s + Number(r.valor), 0);
+    const saidas = gastosFiltrados.reduce((s, g) => s + Number(g.valor), 0);
+    return [
+      {
+        mes: filtroMes,
+        label: filtroMes.slice(5) + "/" + filtroMes.slice(2, 4),
+        entradas,
+        saidas,
+        saldo: entradas - saidas,
+      },
+    ];
+  }, [filtroMes, porMes, pagamentosFiltrados, receitasFiltradas, gastosFiltrados]);
+
   const exportar = () => {
     const linhas: (string | number)[][] = [["Tipo", "Data", "Descrição", "Categoria", "Valor"]];
     pagamentosFiltrados.forEach((p) =>
@@ -362,11 +379,11 @@ function Financeiro() {
             <CardTitle className="text-lg">Entradas x saídas por mês</CardTitle>
           </CardHeader>
           <CardContent className="h-64">
-            {porMes.length === 0 ? (
+            {porMesBar.length === 0 ? (
               <SemDados />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={porMes}>
+                <BarChart data={porMesBar}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                   <XAxis dataKey="label" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis fontSize={12} tickLine={false} axisLine={false} width={40} />
