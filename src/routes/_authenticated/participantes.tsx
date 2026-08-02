@@ -103,12 +103,18 @@ function Participantes() {
 
   const lista = useMemo(() => {
     const termo = busca.trim().toLowerCase();
-    return (data ?? []).filter(
-      (p) =>
-        !termo ||
-        p.nome.toLowerCase().includes(termo) ||
-        (p.apelido ?? "").toLowerCase().includes(termo),
-    );
+    return (data ?? [])
+      .filter(
+        (p) =>
+          !termo ||
+          p.nome.toLowerCase().includes(termo) ||
+          (p.apelido ?? "").toLowerCase().includes(termo),
+      )
+      .sort((a, b) =>
+        (a.apelido || a.nome).localeCompare(b.apelido || b.nome, "pt-BR", {
+          sensitivity: "base",
+        }),
+      );
   }, [data, busca]);
 
   const abrirNovo = () => {
