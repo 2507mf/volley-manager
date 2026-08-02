@@ -135,6 +135,7 @@ export type Database = {
           foto_url: string | null
           id: string
           nome: string
+          numero: number | null
           status: Database["public"]["Enums"]["status_participante"]
           telefone: string | null
           tipo_plano: Database["public"]["Enums"]["tipo_plano"]
@@ -150,6 +151,7 @@ export type Database = {
           foto_url?: string | null
           id?: string
           nome: string
+          numero?: number | null
           status?: Database["public"]["Enums"]["status_participante"]
           telefone?: string | null
           tipo_plano?: Database["public"]["Enums"]["tipo_plano"]
@@ -165,6 +167,7 @@ export type Database = {
           foto_url?: string | null
           id?: string
           nome?: string
+          numero?: number | null
           status?: Database["public"]["Enums"]["status_participante"]
           telefone?: string | null
           tipo_plano?: Database["public"]["Enums"]["tipo_plano"]

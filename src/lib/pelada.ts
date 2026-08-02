@@ -150,6 +150,20 @@ export function useInscricoes() {
   });
 }
 
+export function useInscricoesAno(ano: number) {
+  return useQuery({
+    queryKey: ["inscricoes", "ano", ano],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inscricoes_mensais")
+        .select("*")
+        .like("referencia", `${ano}-%`);
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
 export function useAddInscricoes() {
   const qc = useQueryClient();
   return useMutation({

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, redirect, useNavigate } from "@tanstack/react-router";
-import { Home, Users, Wallet, Receipt, Settings, Moon, Sun, LogOut } from "lucide-react";
+import { Home, Users, Wallet, Receipt, Settings, Table, Moon, Sun, LogOut } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useTheme } from "@/hooks/useTheme";
@@ -20,6 +20,7 @@ const NAV = [
   { to: "/participantes", label: "Participantes", icon: Users },
   { to: "/financeiro", label: "Financeiro", icon: Wallet },
   { to: "/pagamentos", label: "Pagamentos", icon: Receipt },
+  { to: "/planilha", label: "Planilha", icon: Table },
   { to: "/configuracoes", label: "Config", icon: Settings },
 ] as const;
 
@@ -70,7 +71,7 @@ function AppLayout() {
         <Outlet />
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t bg-card/95 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t bg-card/95 backdrop-blur md:hidden">
         {NAV.map((item) => (
           <Link
             key={item.to}

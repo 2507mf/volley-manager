@@ -67,6 +67,7 @@ const schema = z.object({
 type Form = {
   id?: string;
   nome: string;
+  numero: string;
   apelido: string;
   telefone: string;
   data_nascimento: string;
@@ -79,6 +80,7 @@ type Form = {
 
 const vazio = (): Form => ({
   nome: "",
+  numero: "",
   apelido: "",
   telefone: "",
   data_nascimento: "",
@@ -118,6 +120,7 @@ function Participantes() {
     setForm({
       id: p.id,
       nome: p.nome,
+      numero: p.numero != null ? String(p.numero) : "",
       apelido: p.apelido ?? "",
       telefone: p.telefone ?? "",
       data_nascimento: p.data_nascimento ?? "",
@@ -145,6 +148,7 @@ function Participantes() {
       await salvar.mutateAsync({
         ...(form.id ? { id: form.id } : {}),
         nome: parsed.data.nome,
+        numero: form.numero.trim() ? Number(form.numero) : null,
         apelido: form.apelido.trim() || null,
         telefone: form.telefone.trim() || null,
         data_nascimento: form.data_nascimento || null,
@@ -265,6 +269,17 @@ function Participantes() {
               />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="numero">Número (camisa)</Label>
+                <Input
+                  id="numero"
+                  inputMode="numeric"
+                  value={form.numero}
+                  onChange={(e) => setForm({ ...form, numero: e.target.value })}
+                  placeholder="7"
+                  maxLength={3}
+                />
+              </div>
               <div className="space-y-1.5">
                 <Label htmlFor="apelido">Apelido</Label>
                 <Input

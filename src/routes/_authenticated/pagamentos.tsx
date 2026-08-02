@@ -18,11 +18,15 @@ import {
 } from "@/lib/pelada";
 import { brl, formatDate, monthKey, monthLabel, todayISO } from "@/lib/format";
 import {
+  STATUS_ATLETA_CLASS,
+  STATUS_ATLETA_LABEL,
   STATUS_CLASS,
   STATUS_LABEL,
   cicloAnual,
+  mesesEmAtraso,
   pagamentoDoMes,
   statusAnual,
+  statusAtleta,
   statusMensalista,
 } from "@/lib/status";
 import { AvatarParticipante } from "@/components/foto";
@@ -127,6 +131,27 @@ function Pagamentos() {
     );
     return { pagos: pagos.length, total };
   }, [inscritosMes, pags, mes]);
+
+  const anoAtual = new Date().getFullYear();
+  const inscritosPorAtleta = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    ins.forEach((i) => {
+      if (!i.referencia.startsWith(`${anoAtual}-`)) return;
+      if (!map.has(i.participante_id)) map.set(i.participante_id, new Set());
+      map.get(i.participante_id)!.add(i.referencia);
+    });
+    return map;
+  }, [ins, anoAtual]);
+
+  const badgeAno = (p: Participante) => {
+    const set = inscritosPorAtleta.get(p.id) ?? new Set<string>();
+    const st = statusAtleta(pags, p, set, anoAtual);
+    const atraso = mesesEmAtraso(pags, p.id, set, anoAtual);
+    return {
+      label: st === "inadimplente_grave" ? `${atraso} meses` : STATUS_ATLETA_LABEL[st],
+      cls: STATUS_ATLETA_CLASS[st],
+    };
+  };
 
   const mudarMes = (delta: number) => {
     const [y, m] = mes.split("-").map(Number);
@@ -265,6 +290,7 @@ function Pagamentos() {
                     onMarcar={() => abrirCobranca(p, mes)}
                     onDesfazer={pago ? () => desfazer(pago.id) : undefined}
                     onRemover={!pago ? () => removerDoMes(inscricao.id) : undefined}
+                    statusAno={badgeAno(p)}
                   />
                 );
               })}
@@ -295,6 +321,7 @@ function Pagamentos() {
                   valor={pago ? Number(pago.valor) : Number(p.valor_plano)}
                   onMarcar={() => abrirCobranca(p, ciclo.referencia)}
                   onDesfazer={pago ? () => desfazer(pago.id) : undefined}
+                  statusAno={badgeAno(p)}
                 />
               );
             })
@@ -414,6 +441,7 @@ function LinhaPagamento({
   onMarcar,
   onDesfazer,
   onRemover,
+  statusAno,
 }: {
   participante: Participante;
   status: keyof typeof STATUS_CLASS;
@@ -422,6 +450,7 @@ function LinhaPagamento({
   onMarcar: () => void;
   onDesfazer?: (() => void) | undefined;
   onRemover?: (() => void) | undefined;
+  statusAno?: { label: string; cls: string };
 }) {
   return (
     <Card>
@@ -438,6 +467,16 @@ function LinhaPagamento({
           <p className="truncate text-xs text-muted-foreground">{detalhe}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {statusAno && (
+            <span
+              className={cn(
+                "hidden rounded-full border px-2 py-0.5 text-[10px] font-semibold sm:inline",
+                statusAno.cls,
+              )}
+            >
+              {statusAno.label}
+            </span>
+          )}
           <span
             className={cn(
               "rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase",
