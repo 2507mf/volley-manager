@@ -1,15 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Check, Undo2, UserPlus, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, Undo2, UserPlus, X, FileDown } from "lucide-react";
 import { toast } from "sonner";
 
 import {
   FORMAS_PAGAMENTO,
   useAddInscricoes,
   useDeletePagamento,
+  useGastos,
   useInscricoes,
   usePagamentos,
   useParticipantes,
+  useReceitas,
   useRemoveInscricao,
   useSavePagamento,
   type FormaPagamento,
@@ -22,6 +24,7 @@ import {
   STATUS_ATLETA_LABEL,
   STATUS_CLASS,
   STATUS_LABEL,
+  baixarCSV,
   cicloAnual,
   mesesEmAtraso,
   pagamentoDoMes,
@@ -75,6 +78,8 @@ function Pagamentos() {
   const participantes = useParticipantes();
   const pagamentos = usePagamentos();
   const inscricoes = useInscricoes();
+  const gastos = useGastos();
+  const receitas = useReceitas();
   const salvar = useSavePagamento();
   const remover = useDeletePagamento();
   const addInscricoes = useAddInscricoes();
@@ -226,6 +231,84 @@ function Pagamentos() {
     toast.success("Removido do mês.");
   };
 
+  const emitirRelatorio = () => {
+    const linhas: (string | number)[][] = [];
+    linhas.push([`Relatório VÔLEI 6 — ${monthLabel(mes)}`]);
+    linhas.push([]);
+
+    const gastosMes = (gastos.data ?? []).filter((g) => g.data.slice(0, 7) === mes);
+    const receitasMes = (receitas.data ?? []).filter((r) => r.data.slice(0, 7) === mes);
+    const pagamentosMes = pags.filter((p) => p.referencia === mes);
+    const totalMens = pagamentosMes.reduce((s, p) => s + Number(p.valor), 0);
+    const totalRec = receitasMes.reduce((s, r) => s + Number(r.valor), 0);
+    const totalSai = gastosMes.reduce((s, g) => s + Number(g.valor), 0);
+    const totalEnt = totalMens + totalRec;
+
+    linhas.push(["RESUMO"]);
+    linhas.push(["Mensalidades recebidas", totalMens]);
+    linhas.push(["Outras entradas", totalRec]);
+    linhas.push(["Total de entradas", totalEnt]);
+    linhas.push(["Total de saídas", totalSai]);
+    linhas.push(["Saldo do mês", totalEnt - totalSai]);
+    linhas.push([]);
+
+    linhas.push(["MENSALISTAS DO MÊS"]);
+    linhas.push(["Nome", "Status", "Valor", "Forma", "Data pagamento"]);
+    inscritosMes.forEach(({ participante: p }) => {
+      const st = statusMensalista(pags, p.id, mes);
+      const pg = pagamentoDoMes(pags, p.id, mes);
+      linhas.push([
+        p.apelido || p.nome,
+        STATUS_LABEL[st],
+        pg ? Number(pg.valor) : Number(p.valor_plano),
+        pg ? pg.forma_pagamento : "",
+        pg ? pg.data_pagamento : "",
+      ]);
+    });
+    linhas.push([]);
+
+    const atrasados = inscritosMes.filter(
+      ({ participante: p }) => statusMensalista(pags, p.id, mes) === "atrasado",
+    );
+    linhas.push([`MENSALISTAS EM ATRASO (${atrasados.length})`]);
+    linhas.push(["Nome", "Valor devido"]);
+    atrasados.forEach(({ participante: p }) => {
+      linhas.push([p.apelido || p.nome, Number(p.valor_plano)]);
+    });
+    linhas.push([]);
+
+    linhas.push(["ANUAIS"]);
+    linhas.push(["Nome", "Status", "Ciclo", "Valor", "Data pagamento"]);
+    anuais.forEach((p) => {
+      const ciclo = cicloAnual(p);
+      const pg = pagamentoDoMes(pags, p.id, ciclo.referencia);
+      linhas.push([
+        p.apelido || p.nome,
+        statusAnual(pags, p) === "pago" ? "Pago" : "Em atraso",
+        ciclo.referencia,
+        pg ? Number(pg.valor) : Number(p.valor_plano),
+        pg ? pg.data_pagamento : "",
+      ]);
+    });
+    linhas.push([]);
+
+    linhas.push(["SAÍDAS DO MÊS"]);
+    linhas.push(["Descrição", "Categoria", "Valor", "Data"]);
+    gastosMes.forEach((g) => {
+      linhas.push([g.descricao, g.categoria, Number(g.valor), g.data]);
+    });
+    linhas.push([]);
+
+    linhas.push(["OUTRAS ENTRADAS DO MÊS"]);
+    linhas.push(["Descrição", "Categoria", "Valor", "Data"]);
+    receitasMes.forEach((r) => {
+      linhas.push([r.descricao, r.categoria ?? "", Number(r.valor), r.data]);
+    });
+
+    baixarCSV(`relatorio-${mes}.csv`, linhas);
+    toast.success("Relatório gerado.");
+  };
+
   const carregando = participantes.isLoading || pagamentos.isLoading || inscricoes.isLoading;
 
   return (
@@ -265,6 +348,10 @@ function Pagamentos() {
 
           <Button variant="outline" className="w-full" onClick={abrirAdicionar}>
             <UserPlus className="size-4" /> Adicionar participantes ao mês
+          </Button>
+
+          <Button variant="outline" className="w-full" onClick={emitirRelatorio}>
+            <FileDown className="size-4" /> Baixar relatório do mês
           </Button>
 
           {carregando ? (

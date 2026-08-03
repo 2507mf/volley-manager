@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileDown } from "lucide-react";
+import { toast } from "sonner";
 
 import { usePagamentos, useParticipantes, useInscricoesAno } from "@/lib/pelada";
 import { MESES } from "@/lib/format";
@@ -8,6 +9,7 @@ import {
   DIA_VENCIMENTO,
   STATUS_ATLETA_CLASS,
   STATUS_ATLETA_LABEL,
+  baixarCSV,
   mesesEmAtraso,
   pagamentoDoMes,
   statusAtleta,
@@ -94,6 +96,36 @@ function Planilha() {
   const rotulo = (status: (typeof linhas)[number]["status"], atraso: number) =>
     status === "inadimplente_grave" ? `${atraso} meses em atraso` : STATUS_ATLETA_LABEL[status];
 
+  const emitirRelatorio = () => {
+    const saida: (string | number)[][] = [];
+    saida.push([`Planilha VÔLEI 6 — ${ano}`]);
+    saida.push([]);
+    saida.push(["Atleta", "Status", ...MESES.map((m) => m.slice(0, 3))]);
+    linhas.forEach(({ p, status, atraso }) => {
+      const anualPag =
+        p.tipo_plano === "anual" ? pagamentoDoMes(pags, p.id, String(ano)) : undefined;
+      const anualMes = anualPag ? Number(anualPag.data_pagamento.slice(5, 7)) : 0;
+      const cols: (string | number)[] = [
+        `${p.numero != null ? p.numero + " " : ""}${p.apelido || p.nome}`,
+        rotulo(status, atraso),
+      ];
+      for (let m = 1; m <= 12; m++) {
+        const mes = `${ano}-${String(m).padStart(2, "0")}`;
+        if (p.tipo_plano === "anual") {
+          cols.push(anualPag && anualMes === m ? Number(anualPag.valor) : "");
+        } else {
+          const pg = pagamentoDoMes(pags, p.id, mes);
+          cols.push(pg ? Number(pg.valor) : "");
+        }
+      }
+      saida.push(cols);
+    });
+    saida.push([]);
+    saida.push(["Total", "", ...totaisMes.map((t) => (t ? t : ""))]);
+    baixarCSV(`planilha-${ano}.csv`, saida);
+    toast.success("Relatório gerado.");
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
@@ -103,14 +135,19 @@ function Planilha() {
             Controle anual de mensalidades por atleta.
           </p>
         </div>
-        <div className="flex items-center gap-1 rounded-xl border bg-card p-1">
-          <Button variant="ghost" size="icon" onClick={() => setAno((a) => a - 1)} aria-label="Ano anterior">
-            <ChevronLeft className="size-4" />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={emitirRelatorio}>
+            <FileDown className="size-4" /> Relatório
           </Button>
-          <span className="stat-num w-12 text-center text-lg font-bold">{ano}</span>
-          <Button variant="ghost" size="icon" onClick={() => setAno((a) => a + 1)} aria-label="Próximo ano">
-            <ChevronRight className="size-4" />
-          </Button>
+          <div className="flex items-center gap-1 rounded-xl border bg-card p-1">
+            <Button variant="ghost" size="icon" onClick={() => setAno((a) => a - 1)} aria-label="Ano anterior">
+              <ChevronLeft className="size-4" />
+            </Button>
+            <span className="stat-num w-12 text-center text-lg font-bold">{ano}</span>
+            <Button variant="ghost" size="icon" onClick={() => setAno((a) => a + 1)} aria-label="Próximo ano">
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
