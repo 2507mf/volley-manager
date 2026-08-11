@@ -3,6 +3,7 @@ import { ImagePlus, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { useArquivoUrl, uploadArquivo } from "@/lib/pelada";
+import { useOrgId } from "@/lib/org";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -82,6 +83,7 @@ export function UploadArquivo({
   const inputRef = useRef<HTMLInputElement>(null);
   const [enviando, setEnviando] = useState(false);
   const { data: url } = useArquivoUrl(value);
+  const orgId = useOrgId();
 
   const escolher = async (file?: File) => {
     if (!file) return;
@@ -91,7 +93,7 @@ export function UploadArquivo({
     }
     setEnviando(true);
     try {
-      onChange(await uploadArquivo(file, pasta));
+      onChange(await uploadArquivo(file, pasta, orgId));
     } catch {
       toast.error("Não foi possível enviar a imagem.");
     } finally {

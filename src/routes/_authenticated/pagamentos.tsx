@@ -32,6 +32,7 @@ import {
   statusAtleta,
   statusMensalista,
 } from "@/lib/status";
+import { useOrg } from "@/lib/org";
 import { AvatarParticipante } from "@/components/foto";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -59,9 +60,9 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/pagamentos")({
   head: () => ({
     meta: [
-      { title: "Pagamentos — VÔLEI 6" },
+      { title: "Pagamentos" },
       { name: "description", content: "Controle mensal e anual de quem já pagou a pelada." },
-      { property: "og:title", content: "Pagamentos — VÔLEI 6" },
+      { property: "og:title", content: "Pagamentos" },
       { property: "og:description", content: "Controle mensal e anual de quem já pagou a pelada." },
     ],
   }),
@@ -75,6 +76,7 @@ type Cobranca = {
 };
 
 function Pagamentos() {
+  const { org } = useOrg();
   const participantes = useParticipantes();
   const pagamentos = usePagamentos();
   const inscricoes = useInscricoes();
@@ -233,7 +235,7 @@ function Pagamentos() {
 
   const emitirRelatorio = () => {
     const linhas: (string | number)[][] = [];
-    linhas.push([`Relatório VÔLEI 6 — ${monthLabel(mes)}`]);
+    linhas.push([`Relatório ${org?.nome ?? "Pelada"} — ${monthLabel(mes)}`]);
     linhas.push([]);
 
     const gastosMes = (gastos.data ?? []).filter((g) => g.data.slice(0, 7) === mes);

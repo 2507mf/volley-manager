@@ -90,6 +90,23 @@ Mobile e web.
 
 Navegação simples por abas: Início | Participantes | Financeiro | Pagamentos | Configurações
 
+## Arquitetura multi-sistema
+
+Cada cliente tem o seu próprio **sistema** (uma organização): VÔLEI 6, quadra do José, etc.
+Os dados são isolados no banco — não há tela ou consulta que atravesse essa fronteira.
+
+- `organizacoes` — nome, descrição, ícone, cor e logo, tudo editável em Configurações.
+- `organizacao_membros` — quem acessa cada sistema, com papel `dono` / `admin` / `membro`.
+- `perfis` — espelho de `auth.users` com a flag `super_admin`.
+- `participantes`, `pagamentos`, `receitas`, `gastos`, `inscricoes_mensais` carregam
+  `organizacao_id`, e as políticas de RLS liberam a linha via `public.tem_acesso(organizacao_id)`.
+
+O **super admin** (definido em `public.email_super_admin`, hoje `mariafernanda2507@gmail.com`)
+enxerga e administra todos os sistemas; qualquer outra conta só vê aqueles de que é membro.
+Quem cria uma conta nova monta o seu próprio sistema na primeira entrada e vira `dono` dele.
+
+Arquivos no storage ficam em `pelada/<organizacao_id>/<pasta>/…`, com a mesma regra de acesso.
+
 This project was built with [Lovable](https://lovable.dev).
 
 ## Build with Lovable

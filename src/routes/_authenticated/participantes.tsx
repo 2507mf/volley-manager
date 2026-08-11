@@ -48,9 +48,9 @@ import {
 export const Route = createFileRoute("/_authenticated/participantes")({
   head: () => ({
     meta: [
-      { title: "Participantes — VÔLEI 6" },
+      { title: "Participantes" },
       { name: "description", content: "Cadastro e gestão dos jogadores da pelada de vôlei." },
-      { property: "og:title", content: "Participantes — VÔLEI 6" },
+      { property: "og:title", content: "Participantes" },
       { property: "og:description", content: "Cadastro e gestão dos jogadores da pelada de vôlei." },
     ],
   }),

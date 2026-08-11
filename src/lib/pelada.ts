@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrgId } from "@/lib/org";
 import type { Tables, TablesInsert, Enums } from "@/integrations/supabase/types";
 
 export type Participante = Tables<"participantes">;
@@ -52,15 +53,24 @@ async function uid() {
   return data.user.id;
 }
 
+/** Toda escrita carimba a organização atual; sem ela, nada é gravado. */
+function exigirOrg(orgId: string | null): string {
+  if (!orgId) throw new Error("Nenhum sistema selecionado.");
+  return orgId;
+}
+
 /* ---------------------------- participantes ---------------------------- */
 
 export function useParticipantes() {
+  const orgId = useOrgId();
   return useQuery({
-    queryKey: ["participantes"],
+    queryKey: ["participantes", orgId],
+    enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("participantes")
         .select("*")
+        .eq("organizacao_id", orgId!)
         .order("nome");
       if (error) throw error;
       return data;
@@ -70,6 +80,7 @@ export function useParticipantes() {
 
 export function useSaveParticipante() {
   const qc = useQueryClient();
+  const orgId = useOrgId();
   return useMutation({
     mutationFn: async (input: Partial<Participante> & { nome: string }) => {
       const { id, ...rest } = input;
@@ -77,7 +88,11 @@ export function useSaveParticipante() {
         const { error } = await supabase.from("participantes").update(rest).eq("id", id);
         if (error) throw error;
       } else {
-        const payload = { ...rest, user_id: await uid() } as TablesInsert<"participantes">;
+        const payload = {
+          ...rest,
+          user_id: await uid(),
+          organizacao_id: exigirOrg(orgId),
+        } as TablesInsert<"participantes">;
         const { error } = await supabase.from("participantes").insert(payload);
         if (error) throw error;
       }
@@ -100,12 +115,15 @@ export function useDeleteParticipante() {
 /* ------------------------------ pagamentos ----------------------------- */
 
 export function usePagamentos() {
+  const orgId = useOrgId();
   return useQuery({
-    queryKey: ["pagamentos"],
+    queryKey: ["pagamentos", orgId],
+    enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pagamentos")
         .select("*")
+        .eq("organizacao_id", orgId!)
         .order("data_pagamento", { ascending: false });
       if (error) throw error;
       return data;
@@ -115,11 +133,15 @@ export function usePagamentos() {
 
 export function useSavePagamento() {
   const qc = useQueryClient();
+  const orgId = useOrgId();
   return useMutation({
-    mutationFn: async (input: Omit<TablesInsert<"pagamentos">, "user_id">) => {
-      const { error } = await supabase
-        .from("pagamentos")
-        .upsert({ ...input, user_id: await uid() }, { onConflict: "participante_id,referencia" });
+    mutationFn: async (
+      input: Omit<TablesInsert<"pagamentos">, "user_id" | "organizacao_id">,
+    ) => {
+      const { error } = await supabase.from("pagamentos").upsert(
+        { ...input, user_id: await uid(), organizacao_id: exigirOrg(orgId) },
+        { onConflict: "organizacao_id,participante_id,referencia" },
+      );
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries(),
@@ -140,10 +162,15 @@ export function useDeletePagamento() {
 /* -------------------------- inscrições mensais ------------------------- */
 
 export function useInscricoes() {
+  const orgId = useOrgId();
   return useQuery({
-    queryKey: ["inscricoes"],
+    queryKey: ["inscricoes", orgId],
+    enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("inscricoes_mensais").select("*");
+      const { data, error } = await supabase
+        .from("inscricoes_mensais")
+        .select("*")
+        .eq("organizacao_id", orgId!);
       if (error) throw error;
       return data;
     },
@@ -151,12 +178,15 @@ export function useInscricoes() {
 }
 
 export function useInscricoesAno(ano: number) {
+  const orgId = useOrgId();
   return useQuery({
-    queryKey: ["inscricoes", "ano", ano],
+    queryKey: ["inscricoes", orgId, "ano", ano],
+    enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("inscricoes_mensais")
         .select("*")
+        .eq("organizacao_id", orgId!)
         .like("referencia", `${ano}-%`);
       if (error) throw error;
       return data;
@@ -166,17 +196,20 @@ export function useInscricoesAno(ano: number) {
 
 export function useAddInscricoes() {
   const qc = useQueryClient();
+  const orgId = useOrgId();
   return useMutation({
     mutationFn: async (input: { participanteIds: string[]; referencia: string }) => {
       const userId = await uid();
+      const organizacao_id = exigirOrg(orgId);
       const rows = input.participanteIds.map((participante_id) => ({
         user_id: userId,
+        organizacao_id,
         participante_id,
         referencia: input.referencia,
       }));
       const { error } = await supabase
         .from("inscricoes_mensais")
-        .upsert(rows, { onConflict: "participante_id,referencia" });
+        .upsert(rows, { onConflict: "organizacao_id,participante_id,referencia" });
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries(),
@@ -197,12 +230,15 @@ export function useRemoveInscricao() {
 /* -------------------------------- gastos ------------------------------- */
 
 export function useGastos() {
+  const orgId = useOrgId();
   return useQuery({
-    queryKey: ["gastos"],
+    queryKey: ["gastos", orgId],
+    enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("gastos")
         .select("*")
+        .eq("organizacao_id", orgId!)
         .order("data", { ascending: false });
       if (error) throw error;
       return data;
@@ -212,6 +248,7 @@ export function useGastos() {
 
 export function useSaveGasto() {
   const qc = useQueryClient();
+  const orgId = useOrgId();
   return useMutation({
     mutationFn: async (input: Partial<Gasto> & { descricao: string; valor: number }) => {
       const { id, ...rest } = input;
@@ -219,9 +256,11 @@ export function useSaveGasto() {
         const { error } = await supabase.from("gastos").update(rest).eq("id", id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from("gastos")
-          .insert({ ...rest, user_id: await uid() } as TablesInsert<"gastos">);
+        const { error } = await supabase.from("gastos").insert({
+          ...rest,
+          user_id: await uid(),
+          organizacao_id: exigirOrg(orgId),
+        } as TablesInsert<"gastos">);
         if (error) throw error;
       }
     },
@@ -243,12 +282,15 @@ export function useDeleteGasto() {
 /* ------------------------------- receitas ------------------------------ */
 
 export function useReceitas() {
+  const orgId = useOrgId();
   return useQuery({
-    queryKey: ["receitas"],
+    queryKey: ["receitas", orgId],
+    enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("receitas")
         .select("*")
+        .eq("organizacao_id", orgId!)
         .order("data", { ascending: false });
       if (error) throw error;
       return data;
@@ -258,6 +300,7 @@ export function useReceitas() {
 
 export function useSaveReceita() {
   const qc = useQueryClient();
+  const orgId = useOrgId();
   return useMutation({
     mutationFn: async (input: Partial<Receita> & { descricao: string; valor: number }) => {
       const { id, ...rest } = input;
@@ -265,9 +308,11 @@ export function useSaveReceita() {
         const { error } = await supabase.from("receitas").update(rest).eq("id", id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from("receitas")
-          .insert({ ...rest, user_id: await uid() } as TablesInsert<"receitas">);
+        const { error } = await supabase.from("receitas").insert({
+          ...rest,
+          user_id: await uid(),
+          organizacao_id: exigirOrg(orgId),
+        } as TablesInsert<"receitas">);
         if (error) throw error;
       }
     },
@@ -288,10 +333,11 @@ export function useDeleteReceita() {
 
 /* ------------------------------ arquivos ------------------------------- */
 
-export async function uploadArquivo(file: File, pasta: string) {
-  const userId = await uid();
+/** Arquivos ficam sob a pasta da organização — é assim que a RLS do storage isola. */
+export async function uploadArquivo(file: File, pasta: string, orgId: string | null) {
+  const org = exigirOrg(orgId);
   const ext = file.name.split(".").pop() ?? "jpg";
-  const path = `${userId}/${pasta}/${crypto.randomUUID()}.${ext}`;
+  const path = `${org}/${pasta}/${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage.from("pelada").upload(path, file);
   if (error) throw error;
   return path;

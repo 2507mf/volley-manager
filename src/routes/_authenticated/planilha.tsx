@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, FileDown } from "lucide-react";
 import { toast } from "sonner";
 
 import { usePagamentos, useParticipantes, useInscricoesAno } from "@/lib/pelada";
+import { useOrg } from "@/lib/org";
 import { MESES } from "@/lib/format";
 import {
   DIA_VENCIMENTO,
@@ -23,9 +24,9 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/planilha")({
   head: () => ({
     meta: [
-      { title: "Planilha — VÔLEI 6" },
+      { title: "Planilha" },
       { name: "description", content: "Matriz anual de mensalidades por atleta." },
-      { property: "og:title", content: "Planilha — VÔLEI 6" },
+      { property: "og:title", content: "Planilha" },
       { property: "og:description", content: "Matriz anual de mensalidades por atleta." },
     ],
   }),
@@ -36,6 +37,7 @@ const valorCompacto = (n: number) =>
   n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function Planilha() {
+  const { org } = useOrg();
   const [ano, setAno] = useState(new Date().getFullYear());
   const participantes = useParticipantes();
   const pagamentos = usePagamentos();
@@ -79,12 +81,15 @@ function Planilha() {
       for (let m = 1; m <= 12; m++) {
         const mes = `${ano}-${String(m).padStart(2, "0")}`;
         const pg = pagamentoDoMes(pags, p.id, mes);
-        if (pg) arr[m - 1] += Number(pg.valor);
+        if (pg) arr[m - 1] = (arr[m - 1] ?? 0) + Number(pg.valor);
       }
       // anuais: soma o pagamento anual no mês em que foi pago
       if (p.tipo_plano === "anual") {
         const pa = pagamentoDoMes(pags, p.id, String(ano));
-        if (pa) arr[Number(pa.data_pagamento.slice(5, 7)) - 1] += Number(pa.valor);
+        if (pa) {
+          const i = Number(pa.data_pagamento.slice(5, 7)) - 1;
+          arr[i] = (arr[i] ?? 0) + Number(pa.valor);
+        }
       }
     });
     return arr;
@@ -98,7 +103,7 @@ function Planilha() {
 
   const emitirRelatorio = () => {
     const saida: (string | number)[][] = [];
-    saida.push([`Planilha VÔLEI 6 — ${ano}`]);
+    saida.push([`Planilha ${org?.nome ?? "Pelada"} — ${ano}`]);
     saida.push([]);
     saida.push(["Atleta", "Status", ...MESES.map((m) => m.slice(0, 3))]);
     linhas.forEach(({ p, status, atraso }) => {

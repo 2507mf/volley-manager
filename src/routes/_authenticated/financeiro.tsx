@@ -69,9 +69,9 @@ import {
 export const Route = createFileRoute("/_authenticated/financeiro")({
   head: () => ({
     meta: [
-      { title: "Financeiro — VÔLEI 6" },
+      { title: "Financeiro" },
       { name: "description", content: "Entradas, saídas, saldo em caixa e relatórios da pelada." },
-      { property: "og:title", content: "Financeiro — VÔLEI 6" },
+      { property: "og:title", content: "Financeiro" },
       { property: "og:description", content: "Entradas, saídas, saldo em caixa e relatórios da pelada." },
     ],
   }),

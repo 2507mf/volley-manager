@@ -79,13 +79,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "VÔLEI 6 — Gestão da sua pelada de vôlei" },
+      { title: "Vôlei Manager — Gestão da sua pelada de vôlei" },
       {
         name: "description",
         content:
           "Controle participantes, mensalidades, pagamentos e o caixa da sua pelada de vôlei.",
       },
-      { property: "og:title", content: "VÔLEI 6" },
+      { property: "og:title", content: "Vôlei Manager" },
       { property: "og:description", content: "Gestão completa da sua pelada de vôlei." },
       { property: "og:image", content: "/logo.png" },
       { property: "og:type", content: "website" },

@@ -20,9 +20,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 export const Route = createFileRoute("/_authenticated/inicio")({
   head: () => ({
     meta: [
-      { title: "Início — VÔLEI 6" },
+      { title: "Início" },
       { name: "description", content: "Resumo da pelada: caixa, mensalidades e aniversariantes." },
-      { property: "og:title", content: "Início — VÔLEI 6" },
+      { property: "og:title", content: "Início" },
       { property: "og:description", content: "Resumo da pelada: caixa, mensalidades e aniversariantes." },
     ],
   }),

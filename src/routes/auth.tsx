@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Loader2, Eye, EyeOff, Check } from "lucide-react";
+import { Loader2, Eye, EyeOff, Check, Volleyball } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
 import { supabase } from "@/integrations/supabase/client";
+import { NOME_APP } from "@/lib/org";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,9 +16,9 @@ export const Route = createFileRoute("/auth")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Entrar — VÔLEI 6" },
+      { title: "Entrar — Vôlei Manager" },
       { name: "description", content: "Acesse o painel de gestão da sua pelada de vôlei." },
-      { property: "og:title", content: "Entrar — VÔLEI 6" },
+      { property: "og:title", content: "Entrar — Vôlei Manager" },
       { property: "og:description", content: "Acesse o painel de gestão da sua pelada de vôlei." },
     ],
   }),
@@ -105,11 +106,13 @@ function AuthPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-8 bg-background px-5 py-10">
       <div className="flex flex-col items-center gap-3 text-center">
-        <img src="/logo.png" alt="VÔLEI 6" className="size-24 object-contain" />
+        <span className="flex size-20 items-center justify-center rounded-2xl bg-primary/12 text-primary">
+          <Volleyball className="size-11" />
+        </span>
         <div>
-          <h1 className="text-4xl leading-none">VÔLEI 6</h1>
+          <h1 className="text-4xl leading-none">{NOME_APP}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Vôlei, mensalidades e caixa no controle.
+            Participantes, mensalidades e caixa da sua pelada — cada sistema com os seus dados.
           </p>
         </div>
       </div>

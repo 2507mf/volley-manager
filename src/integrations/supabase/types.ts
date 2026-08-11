@@ -14,6 +14,94 @@ export type Database = {
   }
   public: {
     Tables: {
+      organizacoes: {
+        Row: {
+          cor: string
+          criado_por: string | null
+          created_at: string
+          descricao: string | null
+          icone: string
+          id: string
+          logo_url: string | null
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          cor?: string
+          criado_por?: string | null
+          created_at?: string
+          descricao?: string | null
+          icone?: string
+          id?: string
+          logo_url?: string | null
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          cor?: string
+          criado_por?: string | null
+          created_at?: string
+          descricao?: string | null
+          icone?: string
+          id?: string
+          logo_url?: string | null
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      organizacao_membros: {
+        Row: {
+          created_at: string
+          id: string
+          organizacao_id: string
+          papel: Database["public"]["Enums"]["papel_membro"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organizacao_id: string
+          papel?: Database["public"]["Enums"]["papel_membro"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organizacao_id?: string
+          papel?: Database["public"]["Enums"]["papel_membro"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organizacao_membros_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      perfis: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          nome: string | null
+          super_admin: boolean
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id: string
+          nome?: string | null
+          super_admin?: boolean
+        }
+        Update: {
+          nome?: string | null
+        }
+        Relationships: []
+      }
       gastos: {
         Row: {
           categoria: string
@@ -22,6 +110,7 @@ export type Database = {
           data: string
           descricao: string
           id: string
+          organizacao_id: string
           responsavel: string | null
           user_id: string
           valor: number
@@ -33,6 +122,7 @@ export type Database = {
           data?: string
           descricao: string
           id?: string
+          organizacao_id?: string
           responsavel?: string | null
           user_id: string
           valor: number
@@ -44,6 +134,7 @@ export type Database = {
           data?: string
           descricao?: string
           id?: string
+          organizacao_id?: string
           responsavel?: string | null
           user_id?: string
           valor?: number
@@ -54,6 +145,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          organizacao_id: string
           participante_id: string
           referencia: string
           user_id: string
@@ -61,6 +153,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          organizacao_id?: string
           participante_id: string
           referencia: string
           user_id: string
@@ -68,6 +161,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          organizacao_id?: string
           participante_id?: string
           referencia?: string
           user_id?: string
@@ -88,6 +182,7 @@ export type Database = {
           data_pagamento: string
           forma_pagamento: Database["public"]["Enums"]["forma_pagamento"]
           id: string
+          organizacao_id: string
           observacao: string | null
           participante_id: string
           referencia: string
@@ -99,6 +194,7 @@ export type Database = {
           data_pagamento?: string
           forma_pagamento?: Database["public"]["Enums"]["forma_pagamento"]
           id?: string
+          organizacao_id?: string
           observacao?: string | null
           participante_id: string
           referencia: string
@@ -110,6 +206,7 @@ export type Database = {
           data_pagamento?: string
           forma_pagamento?: Database["public"]["Enums"]["forma_pagamento"]
           id?: string
+          organizacao_id?: string
           observacao?: string | null
           participante_id?: string
           referencia?: string
@@ -134,6 +231,7 @@ export type Database = {
           data_nascimento: string | null
           foto_url: string | null
           id: string
+          organizacao_id: string
           nome: string
           numero: number | null
           status: Database["public"]["Enums"]["status_participante"]
@@ -150,6 +248,7 @@ export type Database = {
           data_nascimento?: string | null
           foto_url?: string | null
           id?: string
+          organizacao_id?: string
           nome: string
           numero?: number | null
           status?: Database["public"]["Enums"]["status_participante"]
@@ -166,6 +265,7 @@ export type Database = {
           data_nascimento?: string | null
           foto_url?: string | null
           id?: string
+          organizacao_id?: string
           nome?: string
           numero?: number | null
           status?: Database["public"]["Enums"]["status_participante"]
@@ -184,6 +284,7 @@ export type Database = {
           data: string
           descricao: string
           id: string
+          organizacao_id: string
           user_id: string
           valor: number
         }
@@ -193,6 +294,7 @@ export type Database = {
           data?: string
           descricao: string
           id?: string
+          organizacao_id?: string
           user_id: string
           valor: number
         }
@@ -202,6 +304,7 @@ export type Database = {
           data?: string
           descricao?: string
           id?: string
+          organizacao_id?: string
           user_id?: string
           valor?: number
         }
@@ -212,9 +315,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      criar_organizacao: {
+        Args: { p_nome: string; p_icone?: string; p_cor?: string }
+        Returns: string
+      }
+      adicionar_membro: {
+        Args: {
+          p_org: string
+          p_email: string
+          p_papel?: Database["public"]["Enums"]["papel_membro"]
+        }
+        Returns: string
+      }
+      is_super_admin: {
+        Args: Record<string, never>
+        Returns: boolean
+      }
     }
     Enums: {
+      papel_membro: "dono" | "admin" | "membro"
       categoria_gasto:
         | "quadra"
         | "material"
