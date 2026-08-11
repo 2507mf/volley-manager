@@ -107,6 +107,30 @@ Quem cria uma conta nova monta o seu próprio sistema na primeira entrada e vira
 
 Arquivos no storage ficam em `pelada/<organizacao_id>/<pasta>/…`, com a mesma regra de acesso.
 
+## Temporada e valores
+
+As vagas abrem em janeiro. A partir da **data de entrada** o atleta é cobrado todos os meses
+até a **data de saída** — não existe inscrição mês a mês. Duas bordas, iguais às da planilha
+do clube: quem entra depois do dia de vencimento só começa a pagar no mês seguinte, e o mês
+da saída não é cobrado. Tudo isso vive em `mesesDaTemporada()` (`src/lib/status.ts`).
+
+Os valores são do sistema, não do atleta: `organizacoes.valor_mensalista`, `valor_anual`,
+`cota` e `dia_vencimento`, editáveis em Configurações → Planos e valores. `participantes.valor_plano`
+existe só como **exceção** (valor mensal de um atleta específico, ex.: quem paga anual fora do
+padrão). Pagamentos já registrados guardam o valor da época.
+
+A anuidade é um pagamento único com `referencia` igual ao ano (`"2026"`); a Planilha o rateia
+nos 12 meses, como o Excel do clube. Mensalidades usam `referencia` `"AAAA-MM"`.
+
+## Dashboard
+
+A tela inicial reproduz o fluxo de caixa do cliente: Análise Anual (entradas, saídas, lucro),
+Entrada × Saída por mês, e a análise por período com Top Entradas / Top Saídas. `Anuidade` e
+`Mensalidade` são derivadas dos pagamentos; as demais categorias vêm de `receitas` e `gastos`.
+
+A paleta de gráficos está em `--viz-*` (`src/styles.css`), validada para daltonismo: entrada ×
+saída usa o par azul/vermelho porque verde/vermelho reprova em deuteranopia (ΔE 4,1).
+
 This project was built with [Lovable](https://lovable.dev).
 
 ## Build with Lovable

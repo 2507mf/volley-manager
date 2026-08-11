@@ -99,6 +99,21 @@
   --sidebar-accent-foreground: oklch(0.32 0.1 253);
   --sidebar-border: oklch(0.9 0.012 250);
   --sidebar-ring: oklch(0.68 0.19 45);
+
+  /* Data viz — paleta validada (CVD ΔE >= 8, contraste vs superfície).
+     Entrada x Saída usa o par divergente azul/vermelho: verde/vermelho
+     reprova em deuteranopia (ΔE 4,1). */
+  --viz-surface: oklch(1 0 0);
+  --viz-entrada: #2a78d6;
+  --viz-saida: #d03b3b;
+  --viz-cat-1: #2a78d6;
+  --viz-cat-2: #eb6834;
+  --viz-cat-3: #1baf7a;
+  --viz-cat-4: #eda100;
+  --viz-cat-5: #e87ba4;
+  --viz-cat-6: #008300;
+  --viz-cat-7: #4a3aa7;
+  --viz-cat-8: #e34948;
 }
 
 .dark {
@@ -142,6 +157,19 @@
   --sidebar-accent-foreground: oklch(0.93 0.02 250);
   --sidebar-border: oklch(0.33 0.03 256);
   --sidebar-ring: oklch(0.72 0.18 47);
+
+  /* Mesmos matizes, degraus escolhidos para a superfície escura. */
+  --viz-surface: oklch(0.235 0.035 256);
+  --viz-entrada: #3987e5;
+  --viz-saida: #d03b3b;
+  --viz-cat-1: #3987e5;
+  --viz-cat-2: #d95926;
+  --viz-cat-3: #199e70;
+  --viz-cat-4: #c98500;
+  --viz-cat-5: #d55181;
+  --viz-cat-6: #008300;
+  --viz-cat-7: #9085e9;
+  --viz-cat-8: #e66767;
 }
 
 @layer base {
