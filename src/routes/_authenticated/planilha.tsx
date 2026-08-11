@@ -5,10 +5,10 @@ import { toast } from "sonner";
 
 import { usePagamentos, useParticipantes, usePlano } from "@/lib/pelada";
 import { useOrg } from "@/lib/org";
-import { MESES } from "@/lib/format";
+import { baixarPDF } from "@/lib/pdf";
+import { brl, MESES } from "@/lib/format";
 import {
   STATUS_ATLETA_CLASS,
-  baixarCSV,
   mesVencido,
   mesesDaTemporada,
   mesesEmAtraso,
@@ -118,30 +118,31 @@ function Planilha() {
   const carregando = participantes.isLoading || pagamentos.isLoading;
 
   const emitirRelatorio = () => {
-    const saida: (string | number)[][] = [];
-    saida.push([`Planilha ${org?.nome ?? "Pelada"} — ${ano}`]);
-    saida.push([`Cota R$ ${valorCompacto(plano.cota)}`, `${linhas.length} atletas`]);
-    saida.push([]);
-    saida.push(["Cód.", "Atleta", "Situação", ...MESES.map((m) => m.slice(0, 3)), "Total"]);
-    linhas.forEach(({ p, status, atraso, celulas, total }) => {
-      saida.push([
-        p.codigo ?? "",
-        p.apelido || p.nome,
-        rotuloSituacao(status, atraso),
-        ...celulas.map((c) => c.texto),
-        valorCompacto(total),
-      ]);
+    baixarPDF({
+      nome: `planilha-${ano}`,
+      titulo: `${org?.nome ?? "Pelada"} — controle e receita ${ano}`,
+      subtitulo: `${linhas.length} atletas · cota ${brl(plano.cota)} · total do ano ${brl(totalAno)}`,
+      paisagem: true,
+      secoes: [
+        {
+          colunas: ["Cód.", "Atleta", "Situação", ...MESES.map((m) => m.slice(0, 3)), "Total"],
+          numericas: Array.from({ length: 13 }, (_, i) => i + 3),
+          linhas: [
+            ...linhas.map(({ p, status, atraso, celulas, total }) => [
+              p.codigo ?? "",
+              p.apelido || p.nome,
+              rotuloSituacao(status, atraso),
+              ...celulas.map((c) => c.texto),
+              valorCompacto(total),
+            ]),
+            ["", "Total mês", "", ...totaisMes.map((t) => (t ? valorCompacto(t) : "")), valorCompacto(totalAno)],
+          ],
+          totalNoFim: true,
+          vazio: "Nenhum participante ativo cadastrado.",
+        },
+      ],
     });
-    saida.push([]);
-    saida.push([
-      "",
-      "Total mês",
-      "",
-      ...totaisMes.map((t) => (t ? valorCompacto(t) : "")),
-      valorCompacto(totalAno),
-    ]);
-    baixarCSV(`planilha-${ano}.csv`, saida);
-    toast.success("Relatório gerado.");
+    toast.success("Relatório em PDF gerado.");
   };
 
   return (
@@ -156,7 +157,7 @@ function Planilha() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={emitirRelatorio}>
-            <FileDown className="size-4" /> Relatório
+            <FileDown className="size-4" /> PDF
           </Button>
           <div className="flex items-center gap-1 rounded-xl border bg-card p-1">
             <Button

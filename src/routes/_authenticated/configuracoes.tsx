@@ -28,8 +28,8 @@ import {
   useSalvarOrganizacao,
   type PapelMembro,
 } from "@/lib/org";
-import { brl, todayISO } from "@/lib/format";
-import { baixarCSV } from "@/lib/status";
+import { brl, formatDate, todayISO } from "@/lib/format";
+import { baixarPDF } from "@/lib/pdf";
 import { EscolherCor, EscolherIcone } from "@/components/sistema";
 import { MarcaIcone } from "@/components/marca";
 import { UploadArquivo } from "@/components/foto";
@@ -83,50 +83,49 @@ function Configuracoes() {
   }, []);
 
   const exportarParticipantes = () => {
-    const linhas: (string | number)[][] = [
-      [
-        "Cód.",
-        "Nome",
-        "Apelido",
-        "WhatsApp",
-        "E-mail",
-        "Nascimento",
-        "Plano",
-        "Valor personalizado",
-        "Entrada",
-        "Saída",
-        "Nº camisa",
-        "Nome na camisa",
-        "Tamanho",
-        "Contato emergência",
-        "Telefone emergência",
-        "Parentesco",
-        "Indicado por",
-        "Status",
+    const lista = [...(participantes.data ?? [])].sort((a, b) =>
+      (a.apelido || a.nome).localeCompare(b.apelido || b.nome, "pt-BR"),
+    );
+    baixarPDF({
+      nome: `participantes-${todayISO()}`,
+      titulo: `${org?.nome ?? "Pelada"} — participantes`,
+      subtitulo: `${lista.filter((p) => p.status === "ativo").length} ativos · ${lista.length} no total`,
+      paisagem: true,
+      secoes: [
+        {
+          titulo: "Cadastro",
+          colunas: ["Cód.", "Nome", "Apelido", "Plano", "WhatsApp", "E-mail", "Nascimento", "Entrada", "Status"],
+          linhas: lista.map((p) => [
+            p.codigo ?? "",
+            p.nome,
+            p.apelido ?? "",
+            p.tipo_plano,
+            p.telefone ?? "",
+            p.email ?? "",
+            p.data_nascimento ? formatDate(p.data_nascimento) : "",
+            formatDate(p.data_entrada),
+            p.status,
+          ]),
+          vazio: "Nenhum participante cadastrado.",
+        },
+        {
+          titulo: "Camisa e contato de emergência",
+          colunas: ["Atleta", "Nº", "Nome na camisa", "Tam.", "Contato", "Telefone", "Parentesco", "Indicado por"],
+          linhas: lista.map((p) => [
+            p.apelido || p.nome,
+            p.numero ?? "",
+            p.nome_camisa ?? "",
+            p.tamanho_camisa ?? "",
+            p.contato_nome ?? "",
+            p.contato_telefone ?? "",
+            p.contato_parentesco ?? "",
+            p.indicado_por ?? "",
+          ]),
+          vazio: "Nenhum participante cadastrado.",
+        },
       ],
-      ...(participantes.data ?? []).map((p) => [
-        p.codigo ?? "",
-        p.nome,
-        p.apelido ?? "",
-        p.telefone ?? "",
-        p.email ?? "",
-        p.data_nascimento ?? "",
-        p.tipo_plano,
-        p.valor_plano != null ? Number(p.valor_plano) : "",
-        p.data_entrada,
-        p.data_saida ?? "",
-        p.numero ?? "",
-        p.nome_camisa ?? "",
-        p.tamanho_camisa ?? "",
-        p.contato_nome ?? "",
-        p.contato_telefone ?? "",
-        p.contato_parentesco ?? "",
-        p.indicado_por ?? "",
-        p.status,
-      ]),
-    ];
-    baixarCSV(`participantes-${todayISO()}.csv`, linhas);
-    toast.success("Lista exportada.");
+    });
+    toast.success("Lista em PDF gerada.");
   };
 
   const saldo =
@@ -246,7 +245,7 @@ function Configuracoes() {
             <Resumo titulo="Saldo" valor={brl(saldo)} />
           </div>
           <Button variant="outline" onClick={exportarParticipantes}>
-            <Download className="size-4" /> Exportar participantes (CSV)
+            <Download className="size-4" /> Exportar participantes (PDF)
           </Button>
         </CardContent>
       </Card>

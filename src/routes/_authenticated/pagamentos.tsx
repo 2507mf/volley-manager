@@ -20,7 +20,6 @@ import {
   STATUS_ATLETA_CLASS,
   STATUS_CLASS,
   STATUS_LABEL,
-  baixarCSV,
   mensalistasDoMes,
   mesesEmAtraso,
   pagamentoAnual,
@@ -33,6 +32,7 @@ import {
   valorMensal,
 } from "@/lib/status";
 import { useOrg } from "@/lib/org";
+import { baixarPDF } from "@/lib/pdf";
 import { AvatarParticipante } from "@/components/foto";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -181,10 +181,6 @@ function Pagamentos() {
   };
 
   const emitirRelatorio = () => {
-    const linhas: (string | number)[][] = [];
-    linhas.push([`Relatório ${org?.nome ?? "Pelada"} — ${monthLabel(mes)}`]);
-    linhas.push([]);
-
     const gastosMes = (gastos.data ?? []).filter((g) => g.data.slice(0, 7) === mes);
     const receitasMes = (receitas.data ?? []).filter((r) => r.data.slice(0, 7) === mes);
     const pagamentosMes = pags.filter((p) => p.data_pagamento.slice(0, 7) === mes);
@@ -193,68 +189,95 @@ function Pagamentos() {
     const totalSai = gastosMes.reduce((s, g) => s + Number(g.valor), 0);
     const totalEnt = totalMens + totalRec;
 
-    linhas.push(["RESUMO"]);
-    linhas.push(["Mensalidades e anuidades recebidas", totalMens]);
-    linhas.push(["Outras entradas", totalRec]);
-    linhas.push(["Total de entradas", totalEnt]);
-    linhas.push(["Total de saídas", totalSai]);
-    linhas.push(["Saldo do mês", totalEnt - totalSai]);
-    linhas.push([]);
-
-    linhas.push(["MENSALISTAS DO MÊS"]);
-    linhas.push(["Nome", "Status", "Valor", "Forma", "Data pagamento"]);
-    doMes.forEach((p) => {
-      const st = statusMensalista(pags, p.id, mes, plano.diaVencimento);
-      const pg = pagamentoDoMes(pags, p.id, mes);
-      linhas.push([
-        p.apelido || p.nome,
-        STATUS_LABEL[st],
-        pg ? Number(pg.valor) : valorMensal(p, plano),
-        pg ? pg.forma_pagamento : "",
-        pg ? pg.data_pagamento : "",
-      ]);
-    });
-    linhas.push([]);
-
     const atrasados = doMes.filter(
       (p) => statusMensalista(pags, p.id, mes, plano.diaVencimento) === "atrasado",
     );
-    linhas.push([`MENSALISTAS EM ATRASO (${atrasados.length})`]);
-    linhas.push(["Nome", "Valor devido", "Telefone"]);
-    atrasados.forEach((p) => {
-      linhas.push([p.apelido || p.nome, valorMensal(p, plano), p.telefone ?? ""]);
-    });
-    linhas.push([]);
 
-    linhas.push(["ANUAIS"]);
-    linhas.push(["Nome", "Status", "Ciclo", "Valor", "Data pagamento"]);
-    anuais.forEach((p) => {
-      const pg = pagamentoAnual(pags, p.id, ano);
-      linhas.push([
-        p.apelido || p.nome,
-        statusAnual(pags, p, ano) === "pago" ? "Pago" : "Em atraso",
-        ano,
-        pg ? Number(pg.valor) : valorAnuidade(p, plano),
-        pg ? pg.data_pagamento : "",
-      ]);
+    baixarPDF({
+      nome: `relatorio-${mes}`,
+      titulo: `${org?.nome ?? "Pelada"} — ${monthLabel(mes)}`,
+      subtitulo: `${resumoMes.pagos} de ${doMes.length} mensalistas pagos · vencimento dia ${plano.diaVencimento}`,
+      secoes: [
+        {
+          titulo: "Resumo",
+          linhas: [
+            ["Mensalidades e anuidades recebidas", brl(totalMens)],
+            ["Outras entradas", brl(totalRec)],
+            ["Total de entradas", brl(totalEnt)],
+            ["Total de saídas", brl(totalSai)],
+            ["Saldo do mês", brl(totalEnt - totalSai)],
+          ],
+          totalNoFim: true,
+        },
+        {
+          titulo: `Mensalistas do mês (${doMes.length})`,
+          colunas: ["Atleta", "Situação", "Valor", "Forma", "Pago em"],
+          numericas: [2],
+          linhas: doMes.map((p) => {
+            const pg = pagamentoDoMes(pags, p.id, mes);
+            return [
+              p.apelido || p.nome,
+              STATUS_LABEL[statusMensalista(pags, p.id, mes, plano.diaVencimento)],
+              brl(pg ? Number(pg.valor) : valorMensal(p, plano)),
+              pg ? pg.forma_pagamento : "—",
+              pg ? formatDate(pg.data_pagamento) : "—",
+            ];
+          }),
+          vazio: "Nenhum mensalista na temporada neste mês.",
+        },
+        {
+          titulo: `Em atraso (${atrasados.length})`,
+          colunas: ["Atleta", "Valor devido", "Telefone"],
+          numericas: [1],
+          linhas: atrasados.map((p) => [
+            p.apelido || p.nome,
+            brl(valorMensal(p, plano)),
+            p.telefone ?? "—",
+          ]),
+          vazio: "Ninguém em atraso. ",
+        },
+        {
+          titulo: `Anuais (${anuais.length})`,
+          colunas: ["Atleta", "Situação", "Anuidade", "Pago em"],
+          numericas: [2],
+          linhas: anuais.map((p) => {
+            const pg = pagamentoAnual(pags, p.id, ano);
+            return [
+              p.apelido || p.nome,
+              statusAnual(pags, p, ano) === "pago" ? "Pago" : "Em atraso",
+              brl(pg ? Number(pg.valor) : valorAnuidade(p, plano)),
+              pg ? formatDate(pg.data_pagamento) : "—",
+            ];
+          }),
+          vazio: "Nenhum participante com plano anual.",
+        },
+        {
+          titulo: "Saídas do mês",
+          colunas: ["Data", "Descrição", "Categoria", "Valor"],
+          numericas: [3],
+          linhas: gastosMes.map((g) => [
+            formatDate(g.data),
+            g.descricao,
+            g.categoria,
+            brl(Number(g.valor)),
+          ]),
+          vazio: "Nenhuma saída no mês.",
+        },
+        {
+          titulo: "Outras entradas do mês",
+          colunas: ["Data", "Descrição", "Categoria", "Valor"],
+          numericas: [3],
+          linhas: receitasMes.map((r) => [
+            formatDate(r.data),
+            r.descricao,
+            r.categoria ?? "—",
+            brl(Number(r.valor)),
+          ]),
+          vazio: "Nenhuma outra entrada no mês.",
+        },
+      ],
     });
-    linhas.push([]);
-
-    linhas.push(["SAÍDAS DO MÊS"]);
-    linhas.push(["Descrição", "Categoria", "Valor", "Data"]);
-    gastosMes.forEach((g) => {
-      linhas.push([g.descricao, g.categoria, Number(g.valor), g.data]);
-    });
-    linhas.push([]);
-
-    linhas.push(["OUTRAS ENTRADAS DO MÊS"]);
-    linhas.push(["Descrição", "Categoria", "Valor", "Data"]);
-    receitasMes.forEach((r) => {
-      linhas.push([r.descricao, r.categoria ?? "", Number(r.valor), r.data]);
-    });
-
-    baixarCSV(`relatorio-${mes}.csv`, linhas);
-    toast.success("Relatório gerado.");
+    toast.success("Relatório em PDF gerado.");
   };
 
   const carregando = participantes.isLoading || pagamentos.isLoading;
@@ -310,7 +333,7 @@ function Pagamentos() {
               <CalendarCheck className="size-4" /> Marcar todos como pagos
             </Button>
             <Button variant="outline" onClick={emitirRelatorio}>
-              <FileDown className="size-4" /> Baixar relatório do mês
+              <FileDown className="size-4" /> Relatório do mês (PDF)
             </Button>
           </div>
 

@@ -42,7 +42,8 @@ import {
   type Gasto,
 } from "@/lib/pelada";
 import { brl, formatDate, monthKey, monthLabel, todayISO } from "@/lib/format";
-import { baixarCSV } from "@/lib/status";
+import { baixarPDF } from "@/lib/pdf";
+import { useOrg } from "@/lib/org";
 import { ArquivoImg, UploadArquivo } from "@/components/foto";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -91,6 +92,7 @@ const CORES = [
 const NOVA_CATEGORIA = "__nova__";
 
 function Financeiro() {
+  const { org } = useOrg();
   const gastos = useGastos();
   const receitas = useReceitas();
   const pagamentos = usePagamentos();
@@ -200,23 +202,59 @@ function Financeiro() {
   }, [filtroMes, porMes, pagamentosFiltrados, receitasFiltradas, gastosFiltrados]);
 
   const exportar = () => {
-    const linhas: (string | number)[][] = [["Tipo", "Data", "Descrição", "Categoria", "Valor"]];
-    pagamentosFiltrados.forEach((p) =>
-      linhas.push(["Entrada", p.data_pagamento, `Mensalidade ${p.referencia}`, p.forma_pagamento, Number(p.valor)]),
-    );
-    receitasFiltradas.forEach((r) =>
-      linhas.push(["Entrada", r.data, r.descricao, r.categoria ?? "Outras", Number(r.valor)]),
-    );
-    gastosFiltrados.forEach((g) =>
-      linhas.push(["Saída", g.data, g.descricao, labelCategoriaGasto(g.categoria), Number(g.valor)]),
-    );
-    linhas.push([]);
-    linhas.push(["Total entradas", "", "", "", totais.entradas]);
-    linhas.push(["Total saídas", "", "", "", totais.saidas]);
-    linhas.push(["Saldo", "", "", "", totais.saldo]);
     const sufixo = filtroMes === "todos" ? "geral" : filtroMes;
-    baixarCSV(`relatorio-pelada-${sufixo}.csv`, linhas);
-    toast.success("Relatório exportado.");
+    const entradas: (string | number)[][] = [
+      ...pagamentosFiltrados.map((p) => [
+        formatDate(p.data_pagamento),
+        `Mensalidade ${p.referencia}`,
+        p.forma_pagamento,
+        brl(Number(p.valor)),
+      ]),
+      ...receitasFiltradas.map((r) => [
+        formatDate(r.data),
+        r.descricao,
+        r.categoria ?? "Outras",
+        brl(Number(r.valor)),
+      ]),
+    ];
+    const saidas = gastosFiltrados.map((g) => [
+      formatDate(g.data),
+      g.descricao,
+      labelCategoriaGasto(g.categoria),
+      brl(Number(g.valor)),
+    ]);
+
+    baixarPDF({
+      nome: `financeiro-${sufixo}`,
+      titulo: `Financeiro — ${org?.nome ?? "Pelada"}`,
+      subtitulo: filtroMes === "todos" ? "Todos os meses" : monthLabel(filtroMes),
+      secoes: [
+        {
+          titulo: "Resumo",
+          linhas: [
+            ["Total de entradas", brl(totais.entradas)],
+            ["Total de saídas", brl(totais.saidas)],
+            ["Saldo", brl(totais.saldo)],
+          ],
+          totalNoFim: true,
+        },
+        {
+          titulo: `Entradas (${entradas.length})`,
+          colunas: ["Data", "Descrição", "Categoria", "Valor"],
+          numericas: [3],
+          linhas: entradas,
+          vazio: "Nenhuma entrada no período.",
+        },
+        {
+          titulo: `Saídas (${saidas.length})`,
+          colunas: ["Data", "Descrição", "Categoria", "Valor"],
+          numericas: [3],
+          linhas: saidas,
+          vazio: "Nenhuma saída no período.",
+        },
+      ],
+    });
+    toast.success("Relatório em PDF gerado.");
   };
 
   return (

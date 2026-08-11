@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, type ReactNode } from "react";
-import { Pencil, Plus, Search, Trash2, MessageCircle, Shirt, LifeBuoy } from "lucide-react";
+import { Pencil, Plus, Search, Trash2, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -13,8 +13,7 @@ import {
   type Participante,
   type TipoPlano,
 } from "@/lib/pelada";
-import { brl, formatDate, idade, todayISO, whatsappLink } from "@/lib/format";
-import { valorMensal } from "@/lib/status";
+import { brl, todayISO, whatsappLink } from "@/lib/format";
 import { AvatarParticipante, UploadArquivo } from "@/components/foto";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -129,6 +128,12 @@ function Participantes() {
   const set = <K extends keyof Form>(campo: K, valor: Form[K]) =>
     setForm((f) => ({ ...f, [campo]: valor }));
 
+  /** Novo atleta entra com o próximo código livre — o organizador não digita. */
+  const proximoCodigo = useMemo(
+    () => Math.max(0, ...(data ?? []).map((p) => p.codigo ?? 0)) + 1,
+    [data],
+  );
+
   const lista = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     return (data ?? [])
@@ -197,7 +202,7 @@ function Participantes() {
     try {
       await salvar.mutateAsync({
         ...(form.id ? { id: form.id } : {}),
-        codigo: form.codigo.trim() ? Number(form.codigo) : null,
+        codigo: form.codigo.trim() ? Number(form.codigo) : proximoCodigo,
         nome: parsed.data.nome,
         apelido: form.apelido.trim() || null,
         telefone: form.telefone.trim() || null,
@@ -288,28 +293,6 @@ function Participantes() {
                       </Badge>
                       {p.status === "inativo" && <Badge variant="secondary">Inativo</Badge>}
                     </div>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {brl(valorMensal(p, plano))}/mês ·{" "}
-                      {p.data_nascimento
-                        ? `${idade(p.data_nascimento)} anos · nasc. ${formatDate(p.data_nascimento)}`
-                        : `desde ${formatDate(p.data_entrada)}`}
-                    </p>
-                    {(p.nome_camisa || p.contato_nome) && (
-                      <p className="mt-0.5 flex items-center gap-3 truncate text-xs text-muted-foreground">
-                        {p.nome_camisa && (
-                          <span className="flex items-center gap-1">
-                            <Shirt className="size-3" /> {p.nome_camisa}
-                            {p.tamanho_camisa ? ` · ${p.tamanho_camisa}` : ""}
-                          </span>
-                        )}
-                        {p.contato_nome && (
-                          <span className="flex items-center gap-1">
-                            <LifeBuoy className="size-3" /> {p.contato_nome}
-                            {p.contato_parentesco ? ` (${p.contato_parentesco})` : ""}
-                          </span>
-                        )}
-                      </p>
-                    )}
                   </div>
                   <div className="flex shrink-0 items-center">
                     {zap && (
@@ -352,15 +335,20 @@ function Participantes() {
           <div className="space-y-6">
             <Secao titulo="Dados pessoais">
               <div className="grid gap-4 sm:grid-cols-6">
-                <Campo label="Cód." className="sm:col-span-1">
-                  <Input
-                    inputMode="numeric"
-                    value={form.codigo}
-                    onChange={(e) => set("codigo", e.target.value)}
-                    maxLength={4}
-                  />
-                </Campo>
-                <Campo label="Nome completo *" className="sm:col-span-5">
+                {form.id && (
+                  <Campo label="Cód." className="sm:col-span-1">
+                    <Input
+                      inputMode="numeric"
+                      value={form.codigo}
+                      onChange={(e) => set("codigo", e.target.value)}
+                      maxLength={4}
+                    />
+                  </Campo>
+                )}
+                <Campo
+                  label="Nome completo *"
+                  className={form.id ? "sm:col-span-5" : "sm:col-span-6"}
+                >
                   <Input
                     value={form.nome}
                     onChange={(e) => set("nome", e.target.value)}

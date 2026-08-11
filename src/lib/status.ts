@@ -217,15 +217,3 @@ export function diasParaAniversario(nascimento?: string | null) {
   if (prox < base) prox = new Date(hoje.getFullYear() + 1, d.getMonth(), d.getDate());
   return Math.round((prox.getTime() - base.getTime()) / 86400000);
 }
-
-export function baixarCSV(nome: string, linhas: (string | number)[][]) {
-  const csv = linhas
-    .map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";"))
-    .join("\n");
-  const url = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = nome;
-  a.click();
-  URL.revokeObjectURL(url);
-}
