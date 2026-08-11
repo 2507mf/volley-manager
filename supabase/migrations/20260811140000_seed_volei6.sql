@@ -303,7 +303,9 @@ BEGIN
   (12, '2026-06', 30, '2026-06-11'),
   (12, '2026-07', 30, '2026-07-11')
   ) AS g (codigo, referencia, valor, data_pagamento)
-  JOIN public.participantes p ON p.organizacao_id = org_id AND p.codigo = g.codigo;
+  -- comparacao por texto: tolera 'codigo' criado como integer ou como text
+  JOIN public.participantes p
+    ON p.organizacao_id = org_id AND p.codigo::text = g.codigo::text;
 
   -- Fluxo de caixa 2026: entradas que não são mensalidade/anuidade, e a única saída.
   INSERT INTO public.receitas (organizacao_id, user_id, descricao, categoria, valor, data) VALUES

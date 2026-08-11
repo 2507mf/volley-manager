@@ -43,6 +43,20 @@ ALTER TABLE public.participantes
 COMMENT ON COLUMN public.participantes.data_saida IS
   'Primeiro dia em que o atleta deixa de ser cobrado. Nulo = segue na pelada.';
 
+-- Se 'codigo' já existia com outro tipo (ex.: text), normaliza para integer.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'participantes'
+      AND column_name = 'codigo' AND data_type <> 'integer'
+  ) THEN
+    ALTER TABLE public.participantes
+      ALTER COLUMN codigo TYPE INTEGER USING nullif(btrim(codigo::text), '')::integer;
+  END IF;
+END;
+$$;
+
 -- valor_plano vira exceção opcional: em branco, vale o valor do plano da organização.
 ALTER TABLE public.participantes ALTER COLUMN valor_plano DROP DEFAULT;
 ALTER TABLE public.participantes ALTER COLUMN valor_plano DROP NOT NULL;
