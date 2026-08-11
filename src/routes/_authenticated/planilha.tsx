@@ -3,17 +3,20 @@ import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, FileDown } from "lucide-react";
 import { toast } from "sonner";
 
-import { usePagamentos, useParticipantes, useInscricoesAno } from "@/lib/pelada";
+import { usePagamentos, useParticipantes, usePlano } from "@/lib/pelada";
 import { useOrg } from "@/lib/org";
 import { MESES } from "@/lib/format";
 import {
-  DIA_VENCIMENTO,
   STATUS_ATLETA_CLASS,
-  STATUS_ATLETA_LABEL,
   baixarCSV,
+  mesVencido,
+  mesesDaTemporada,
   mesesEmAtraso,
+  pagamentoAnual,
   pagamentoDoMes,
+  rotuloSituacao,
   statusAtleta,
+  valorMensal,
 } from "@/lib/status";
 import { AvatarParticipante } from "@/components/foto";
 import { Button } from "@/components/ui/button";
@@ -26,8 +29,6 @@ export const Route = createFileRoute("/_authenticated/planilha")({
     meta: [
       { title: "Planilha" },
       { name: "description", content: "Matriz anual de mensalidades por atleta." },
-      { property: "og:title", content: "Planilha" },
-      { property: "og:description", content: "Matriz anual de mensalidades por atleta." },
     ],
   }),
   component: Planilha,
@@ -36,108 +37,121 @@ export const Route = createFileRoute("/_authenticated/planilha")({
 const valorCompacto = (n: number) =>
   n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+/** Célula de mês: valor pago, "x-x-x" fora da temporada, ou vazia se ainda não venceu. */
+type Celula = { texto: string; classe: string };
+
 function Planilha() {
   const { org } = useOrg();
+  const plano = usePlano();
   const [ano, setAno] = useState(new Date().getFullYear());
   const participantes = useParticipantes();
   const pagamentos = usePagamentos();
-  const inscricoes = useInscricoesAno(ano);
 
   const pags = pagamentos.data ?? [];
-  const ativos = (participantes.data ?? []).filter((p) => p.status === "ativo");
-
-  const hoje = new Date();
-  const atual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
-  const mesVencido = (mes: string) =>
-    mes < atual || (mes === atual && hoje.getDate() > DIA_VENCIMENTO);
-
-  const inscritosPorAtleta = useMemo(() => {
-    const map = new Map<string, Set<string>>();
-    (inscricoes.data ?? []).forEach((i) => {
-      if (!map.has(i.participante_id)) map.set(i.participante_id, new Set());
-      map.get(i.participante_id)!.add(i.referencia);
-    });
-    return map;
-  }, [inscricoes.data]);
+  const ativos = useMemo(
+    () => (participantes.data ?? []).filter((p) => p.status === "ativo"),
+    [participantes.data],
+  );
 
   const linhas = useMemo(
     () =>
       ativos
         .map((p) => {
-          const inscritos = inscritosPorAtleta.get(p.id) ?? new Set<string>();
-          const status = statusAtleta(pags, p, inscritos, ano);
-          const atraso = mesesEmAtraso(pags, p.id, inscritos, ano);
-          return { p, inscritos, status, atraso };
+          const temporada = new Set(mesesDaTemporada(p, ano, plano.diaVencimento));
+          const status = statusAtleta(pags, p, ano, plano.diaVencimento);
+          const atraso = mesesEmAtraso(pags, p, ano, plano.diaVencimento);
+          const anualPago = p.tipo_plano === "anual" ? pagamentoAnual(pags, p.id, ano) : undefined;
+
+          // A anuidade é paga de uma vez, mas a planilha do clube rateia por mês.
+          const rateioAnual = anualPago ? Number(anualPago.valor) / 12 : 0;
+
+          const celulas: Celula[] = [];
+          let total = 0;
+          for (let m = 1; m <= 12; m++) {
+            const mes = `${ano}-${String(m).padStart(2, "0")}`;
+            if (!temporada.has(m)) {
+              celulas.push({ texto: "x-x-x", classe: "bg-muted/40 text-muted-foreground/70" });
+              continue;
+            }
+            if (p.tipo_plano === "anual") {
+              if (anualPago) {
+                total += rateioAnual;
+                celulas.push({
+                  texto: valorCompacto(rateioAnual),
+                  classe: "text-emerald-600 font-medium",
+                });
+              } else {
+                celulas.push({ texto: "", classe: "bg-destructive/10" });
+              }
+              continue;
+            }
+            const pg = pagamentoDoMes(pags, p.id, mes);
+            if (pg) {
+              total += Number(pg.valor);
+              celulas.push({ texto: valorCompacto(Number(pg.valor)), classe: "font-medium" });
+            } else {
+              celulas.push({
+                texto: "",
+                classe: mesVencido(mes, plano.diaVencimento) ? "bg-destructive/10" : "",
+              });
+            }
+          }
+
+          return { p, status, atraso, celulas, total };
         })
-        .sort((a, b) =>
-          (a.p.apelido || a.p.nome).localeCompare(b.p.apelido || b.p.nome),
-        ),
-    [ativos, inscritosPorAtleta, pags, ano],
+        .sort((a, b) => (a.p.apelido || a.p.nome).localeCompare(b.p.apelido || b.p.nome, "pt-BR")),
+    [ativos, pags, ano, plano],
   );
 
   const totaisMes = useMemo(() => {
     const arr = Array.from({ length: 12 }, () => 0);
-    ativos.forEach((p) => {
-      for (let m = 1; m <= 12; m++) {
-        const mes = `${ano}-${String(m).padStart(2, "0")}`;
-        const pg = pagamentoDoMes(pags, p.id, mes);
-        if (pg) arr[m - 1] = (arr[m - 1] ?? 0) + Number(pg.valor);
-      }
-      // anuais: soma o pagamento anual no mês em que foi pago
-      if (p.tipo_plano === "anual") {
-        const pa = pagamentoDoMes(pags, p.id, String(ano));
-        if (pa) {
-          const i = Number(pa.data_pagamento.slice(5, 7)) - 1;
-          arr[i] = (arr[i] ?? 0) + Number(pa.valor);
-        }
-      }
+    linhas.forEach(({ celulas }) => {
+      celulas.forEach((c, i) => {
+        const n = Number(c.texto.replace(/\./g, "").replace(",", "."));
+        if (Number.isFinite(n)) arr[i] = (arr[i] ?? 0) + n;
+      });
     });
     return arr;
-  }, [ativos, pags, ano]);
+  }, [linhas]);
 
-  const carregando =
-    participantes.isLoading || pagamentos.isLoading || inscricoes.isLoading;
-
-  const rotulo = (status: (typeof linhas)[number]["status"], atraso: number) =>
-    status === "inadimplente_grave" ? `${atraso} meses em atraso` : STATUS_ATLETA_LABEL[status];
+  const totalAno = totaisMes.reduce((s, t) => s + t, 0);
+  const carregando = participantes.isLoading || pagamentos.isLoading;
 
   const emitirRelatorio = () => {
     const saida: (string | number)[][] = [];
     saida.push([`Planilha ${org?.nome ?? "Pelada"} — ${ano}`]);
+    saida.push([`Cota R$ ${valorCompacto(plano.cota)}`, `${linhas.length} atletas`]);
     saida.push([]);
-    saida.push(["Atleta", "Status", ...MESES.map((m) => m.slice(0, 3))]);
-    linhas.forEach(({ p, status, atraso }) => {
-      const anualPag =
-        p.tipo_plano === "anual" ? pagamentoDoMes(pags, p.id, String(ano)) : undefined;
-      const anualMes = anualPag ? Number(anualPag.data_pagamento.slice(5, 7)) : 0;
-      const cols: (string | number)[] = [
-        `${p.numero != null ? p.numero + " " : ""}${p.apelido || p.nome}`,
-        rotulo(status, atraso),
-      ];
-      for (let m = 1; m <= 12; m++) {
-        const mes = `${ano}-${String(m).padStart(2, "0")}`;
-        if (p.tipo_plano === "anual") {
-          cols.push(anualPag && anualMes === m ? Number(anualPag.valor) : "");
-        } else {
-          const pg = pagamentoDoMes(pags, p.id, mes);
-          cols.push(pg ? Number(pg.valor) : "");
-        }
-      }
-      saida.push(cols);
+    saida.push(["Cód.", "Atleta", "Situação", ...MESES.map((m) => m.slice(0, 3)), "Total"]);
+    linhas.forEach(({ p, status, atraso, celulas, total }) => {
+      saida.push([
+        p.codigo ?? "",
+        p.apelido || p.nome,
+        rotuloSituacao(status, atraso),
+        ...celulas.map((c) => c.texto),
+        valorCompacto(total),
+      ]);
     });
     saida.push([]);
-    saida.push(["Total", "", ...totaisMes.map((t) => (t ? t : ""))]);
+    saida.push([
+      "",
+      "Total mês",
+      "",
+      ...totaisMes.map((t) => (t ? valorCompacto(t) : "")),
+      valorCompacto(totalAno),
+    ]);
     baixarCSV(`planilha-${ano}.csv`, saida);
     toast.success("Relatório gerado.");
   };
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl leading-none">Planilha</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Controle anual de mensalidades por atleta.
+            {linhas.length} atletas · cota R$ {valorCompacto(plano.cota)} · total do ano R${" "}
+            {valorCompacto(totalAno)}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -145,11 +159,21 @@ function Planilha() {
             <FileDown className="size-4" /> Relatório
           </Button>
           <div className="flex items-center gap-1 rounded-xl border bg-card p-1">
-            <Button variant="ghost" size="icon" onClick={() => setAno((a) => a - 1)} aria-label="Ano anterior">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setAno((a) => a - 1)}
+              aria-label="Ano anterior"
+            >
               <ChevronLeft className="size-4" />
             </Button>
             <span className="stat-num w-12 text-center text-lg font-bold">{ano}</span>
-            <Button variant="ghost" size="icon" onClick={() => setAno((a) => a + 1)} aria-label="Próximo ano">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setAno((a) => a + 1)}
+              aria-label="Próximo ano"
+            >
               <ChevronRight className="size-4" />
             </Button>
           </div>
@@ -172,98 +196,81 @@ function Planilha() {
                 <th className="sticky left-0 z-10 bg-muted/50 px-3 py-2 text-left font-semibold">
                   Atleta
                 </th>
-                <th className="whitespace-nowrap px-3 py-2 text-left font-semibold">Status</th>
+                <th className="whitespace-nowrap px-3 py-2 text-left font-semibold">Situação</th>
                 {MESES.map((mes) => (
                   <th key={mes} className="px-2 py-2 text-center font-semibold">
                     {mes.slice(0, 3)}
                   </th>
                 ))}
+                <th className="px-3 py-2 text-right font-semibold">Total</th>
               </tr>
             </thead>
             <tbody>
-              {linhas.map(({ p, inscritos, status, atraso }) => {
-                const anualPag =
-                  p.tipo_plano === "anual" ? pagamentoDoMes(pags, p.id, String(ano)) : undefined;
-                const anualMes = anualPag ? Number(anualPag.data_pagamento.slice(5, 7)) : 0;
-                return (
-                  <tr key={p.id} className="border-t">
-                    <td
+              {linhas.map(({ p, status, atraso, celulas, total }) => (
+                <tr key={p.id} className="border-t">
+                  <td
+                    className={cn(
+                      "sticky left-0 z-10 border-r px-3 py-2",
+                      STATUS_ATLETA_CLASS[status],
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <AvatarParticipante
+                        nome={p.nome}
+                        foto={p.foto_url}
+                        className="size-7 text-[11px]"
+                      />
+                      <span className="whitespace-nowrap font-medium">
+                        {p.codigo != null && <span className="mr-1 opacity-70">{p.codigo}.</span>}
+                        {p.apelido || p.nome}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2">
+                    <span
                       className={cn(
-                        "sticky left-0 z-10 border-r px-3 py-2",
+                        "rounded-full border px-2 py-0.5 text-[11px] font-semibold",
                         STATUS_ATLETA_CLASS[status],
                       )}
                     >
-                      <div className="flex items-center gap-2">
-                        <AvatarParticipante
-                          nome={p.nome}
-                          foto={p.foto_url}
-                          className="size-7 text-[11px]"
-                        />
-                        <span className="whitespace-nowrap font-medium">
-                          {p.numero != null && (
-                            <span className="mr-1 opacity-70">{p.numero}.</span>
-                          )}
-                          {p.apelido || p.nome}
-                        </span>
-                      </div>
+                      {rotuloSituacao(status, atraso)}
+                    </span>
+                  </td>
+                  {celulas.map((c, i) => (
+                    <td
+                      key={i}
+                      className={cn("border-l px-2 py-2 text-center tabular-nums", c.classe)}
+                    >
+                      {c.texto}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2">
-                      <span
-                        className={cn(
-                          "rounded-full border px-2 py-0.5 text-[11px] font-semibold",
-                          STATUS_ATLETA_CLASS[status],
-                        )}
-                      >
-                        {rotulo(status, atraso)}
-                      </span>
-                    </td>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
-                      const mes = `${ano}-${String(m).padStart(2, "0")}`;
-                      let txt = "";
-                      let cls = "";
-                      if (p.tipo_plano === "anual") {
-                        if (anualPag && anualMes === m) {
-                          txt = valorCompacto(Number(anualPag.valor));
-                          cls = "text-emerald-600 font-medium";
-                        }
-                      } else {
-                        const pg = pagamentoDoMes(pags, p.id, mes);
-                        if (pg) {
-                          txt = valorCompacto(Number(pg.valor));
-                          cls = "font-medium";
-                        } else if (!inscritos.has(mes)) {
-                          cls = "bg-muted/30";
-                        } else if (mesVencido(mes)) {
-                          cls = "bg-destructive/10";
-                        }
-                      }
-                      return (
-                        <td
-                          key={m}
-                          className={cn("border-l px-2 py-2 text-center tabular-nums", cls)}
-                        >
-                          {txt}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
+                  ))}
+                  <td className="stat-num border-l px-3 py-2 text-right">{valorCompacto(total)}</td>
+                </tr>
+              ))}
             </tbody>
             <tfoot>
               <tr className="border-t bg-muted/50 font-semibold">
-                <td className="sticky left-0 z-10 bg-muted/50 px-3 py-2 text-left">Total</td>
+                <td className="sticky left-0 z-10 bg-muted/50 px-3 py-2 text-left">Total mês</td>
                 <td className="px-3 py-2" />
                 {totaisMes.map((t, i) => (
                   <td key={i} className="border-l px-2 py-2 text-center tabular-nums">
                     {t ? valorCompacto(t) : ""}
                   </td>
                 ))}
+                <td className="stat-num border-l px-3 py-2 text-right">
+                  {valorCompacto(totalAno)}
+                </td>
               </tr>
             </tfoot>
           </table>
         </div>
       )}
+
+      <p className="text-xs text-muted-foreground">
+        <span className="rounded bg-muted/40 px-1.5 py-0.5 font-medium">x-x-x</span> = fora da
+        temporada (antes da entrada ou depois da saída). Fundo vermelho = mês vencido sem pagamento.
+        Anuais aparecem com a anuidade rateada nos 12 meses, como na planilha do clube.
+      </p>
     </div>
   );
 }

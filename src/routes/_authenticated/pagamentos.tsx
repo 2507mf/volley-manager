@@ -1,42 +1,41 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Check, Undo2, UserPlus, X, FileDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, Undo2, FileDown, CalendarCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import {
   FORMAS_PAGAMENTO,
-  useAddInscricoes,
   useDeletePagamento,
   useGastos,
-  useInscricoes,
   usePagamentos,
   useParticipantes,
+  usePlano,
   useReceitas,
-  useRemoveInscricao,
   useSavePagamento,
   type FormaPagamento,
-  type Inscricao,
   type Participante,
 } from "@/lib/pelada";
 import { brl, formatDate, monthKey, monthLabel, todayISO } from "@/lib/format";
 import {
   STATUS_ATLETA_CLASS,
-  STATUS_ATLETA_LABEL,
   STATUS_CLASS,
   STATUS_LABEL,
   baixarCSV,
-  cicloAnual,
+  mensalistasDoMes,
   mesesEmAtraso,
+  pagamentoAnual,
   pagamentoDoMes,
+  rotuloSituacao,
   statusAnual,
   statusAtleta,
   statusMensalista,
+  valorAnuidade,
+  valorMensal,
 } from "@/lib/status";
 import { useOrg } from "@/lib/org";
 import { AvatarParticipante } from "@/components/foto";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -62,8 +61,6 @@ export const Route = createFileRoute("/_authenticated/pagamentos")({
     meta: [
       { title: "Pagamentos" },
       { name: "description", content: "Controle mensal e anual de quem já pagou a pelada." },
-      { property: "og:title", content: "Pagamentos" },
-      { property: "og:description", content: "Controle mensal e anual de quem já pagou a pelada." },
     ],
   }),
   component: Pagamentos,
@@ -77,87 +74,49 @@ type Cobranca = {
 
 function Pagamentos() {
   const { org } = useOrg();
+  const plano = usePlano();
   const participantes = useParticipantes();
   const pagamentos = usePagamentos();
-  const inscricoes = useInscricoes();
   const gastos = useGastos();
   const receitas = useReceitas();
   const salvar = useSavePagamento();
   const remover = useDeletePagamento();
-  const addInscricoes = useAddInscricoes();
-  const removeInscricao = useRemoveInscricao();
 
   const [mes, setMes] = useState(monthKey(new Date()));
   const [cobranca, setCobranca] = useState<Cobranca | null>(null);
   const [valor, setValor] = useState("");
   const [data, setData] = useState(todayISO());
   const [forma, setForma] = useState<FormaPagamento>("pix");
-  const [addAberto, setAddAberto] = useState(false);
-  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
 
   const parts = participantes.data ?? [];
   const ativos = parts.filter((p) => p.status === "ativo");
   const pags = pagamentos.data ?? [];
-  const ins = inscricoes.data ?? [];
+  const ano = Number(mes.split("-")[0]);
 
   const anuais = ativos.filter((p) => p.tipo_plano === "anual");
 
-  const mapPart = useMemo(() => new Map(parts.map((p) => [p.id, p])), [parts]);
-
-  const inscritosMes = useMemo(
-    () =>
-      ins
-        .filter((i) => i.referencia === mes)
-        .map((i) => ({ inscricao: i, participante: mapPart.get(i.participante_id) }))
-        .filter(
-          (x): x is { inscricao: Inscricao; participante: Participante } => !!x.participante,
-        )
-        .sort((a, b) =>
-          (a.participante.apelido || a.participante.nome).localeCompare(
-            b.participante.apelido || b.participante.nome,
-          ),
-        ),
-    [ins, mes, mapPart],
-  );
-
-  const naoInscritos = useMemo(
-    () =>
-      parts
-        .filter((p) => p.tipo_plano !== "anual")
-        .filter((p) => !inscritosMes.some((x) => x.participante.id === p.id)),
-    [parts, inscritosMes],
+  // A temporada define quem é cobrado: entrou, é cobrado todo mês até sair.
+  const doMes = useMemo(
+    () => mensalistasDoMes(ativos, mes, plano.diaVencimento),
+    [ativos, mes, plano.diaVencimento],
   );
 
   const resumoMes = useMemo(() => {
-    const pagos = inscritosMes.filter(
-      (x) => statusMensalista(pags, x.participante.id, mes) === "pago",
+    const pagos = doMes.filter(
+      (p) => statusMensalista(pags, p.id, mes, plano.diaVencimento) === "pago",
     );
     const total = pagos.reduce(
-      (s, x) => s + Number(pagamentoDoMes(pags, x.participante.id, mes)?.valor ?? 0),
+      (s, p) => s + Number(pagamentoDoMes(pags, p.id, mes)?.valor ?? 0),
       0,
     );
-    return { pagos: pagos.length, total };
-  }, [inscritosMes, pags, mes]);
-
-  const anoAtual = new Date().getFullYear();
-  const inscritosPorAtleta = useMemo(() => {
-    const map = new Map<string, Set<string>>();
-    ins.forEach((i) => {
-      if (!i.referencia.startsWith(`${anoAtual}-`)) return;
-      if (!map.has(i.participante_id)) map.set(i.participante_id, new Set());
-      map.get(i.participante_id)!.add(i.referencia);
-    });
-    return map;
-  }, [ins, anoAtual]);
+    const previsto = doMes.reduce((s, p) => s + valorMensal(p, plano), 0);
+    return { pagos: pagos.length, total, previsto };
+  }, [doMes, pags, mes, plano]);
 
   const badgeAno = (p: Participante) => {
-    const set = inscritosPorAtleta.get(p.id) ?? new Set<string>();
-    const st = statusAtleta(pags, p, set, anoAtual);
-    const atraso = mesesEmAtraso(pags, p.id, set, anoAtual);
-    return {
-      label: st === "inadimplente_grave" ? `${atraso} meses` : STATUS_ATLETA_LABEL[st],
-      cls: STATUS_ATLETA_CLASS[st],
-    };
+    const st = statusAtleta(pags, p, ano, plano.diaVencimento);
+    const atraso = mesesEmAtraso(pags, p, ano, plano.diaVencimento);
+    return { label: rotuloSituacao(st, atraso), cls: STATUS_ATLETA_CLASS[st] };
   };
 
   const mudarMes = (delta: number) => {
@@ -165,9 +124,9 @@ function Pagamentos() {
     setMes(monthKey(new Date(y ?? 2026, (m ?? 1) - 1 + delta, 1)));
   };
 
-  const abrirCobranca = (participante: Participante, referencia: string) => {
-    setCobranca({ participante, referencia, valor: Number(participante.valor_plano) });
-    setValor(String(participante.valor_plano ?? ""));
+  const abrirCobranca = (participante: Participante, referencia: string, sugestao: number) => {
+    setCobranca({ participante, referencia, valor: sugestao });
+    setValor(sugestao.toFixed(2));
     setData(todayISO());
     setForma("pix");
   };
@@ -199,38 +158,26 @@ function Pagamentos() {
     toast.success("Pagamento removido.");
   };
 
-  const toggleSelecionado = (id: string) => {
-    setSelecionados((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const abrirAdicionar = () => {
-    setSelecionados(new Set());
-    setAddAberto(true);
-  };
-
-  const confirmarAdicao = async () => {
-    if (selecionados.size === 0) {
-      setAddAberto(false);
+  const marcarTodos = async () => {
+    const pendentes = doMes.filter((p) => !pagamentoDoMes(pags, p.id, mes));
+    if (pendentes.length === 0) {
+      toast.info("Todo mundo já está pago neste mês.");
       return;
     }
     try {
-      await addInscricoes.mutateAsync({ participanteIds: [...selecionados], referencia: mes });
-      toast.success("Participantes adicionados ao mês.");
-      setSelecionados(new Set());
-      setAddAberto(false);
+      for (const p of pendentes) {
+        await salvar.mutateAsync({
+          participante_id: p.id,
+          valor: valorMensal(p, plano),
+          data_pagamento: `${mes}-${String(plano.diaVencimento).padStart(2, "0")}`,
+          referencia: mes,
+          forma_pagamento: "pix",
+        });
+      }
+      toast.success(`${pendentes.length} pagamentos registrados.`);
     } catch {
-      toast.error("Não foi possível adicionar.");
+      toast.error("Não foi possível registrar todos.");
     }
-  };
-
-  const removerDoMes = async (inscricaoId: string) => {
-    await removeInscricao.mutateAsync(inscricaoId);
-    toast.success("Removido do mês.");
   };
 
   const emitirRelatorio = () => {
@@ -240,14 +187,14 @@ function Pagamentos() {
 
     const gastosMes = (gastos.data ?? []).filter((g) => g.data.slice(0, 7) === mes);
     const receitasMes = (receitas.data ?? []).filter((r) => r.data.slice(0, 7) === mes);
-    const pagamentosMes = pags.filter((p) => p.referencia === mes);
+    const pagamentosMes = pags.filter((p) => p.data_pagamento.slice(0, 7) === mes);
     const totalMens = pagamentosMes.reduce((s, p) => s + Number(p.valor), 0);
     const totalRec = receitasMes.reduce((s, r) => s + Number(r.valor), 0);
     const totalSai = gastosMes.reduce((s, g) => s + Number(g.valor), 0);
     const totalEnt = totalMens + totalRec;
 
     linhas.push(["RESUMO"]);
-    linhas.push(["Mensalidades recebidas", totalMens]);
+    linhas.push(["Mensalidades e anuidades recebidas", totalMens]);
     linhas.push(["Outras entradas", totalRec]);
     linhas.push(["Total de entradas", totalEnt]);
     linhas.push(["Total de saídas", totalSai]);
@@ -256,39 +203,38 @@ function Pagamentos() {
 
     linhas.push(["MENSALISTAS DO MÊS"]);
     linhas.push(["Nome", "Status", "Valor", "Forma", "Data pagamento"]);
-    inscritosMes.forEach(({ participante: p }) => {
-      const st = statusMensalista(pags, p.id, mes);
+    doMes.forEach((p) => {
+      const st = statusMensalista(pags, p.id, mes, plano.diaVencimento);
       const pg = pagamentoDoMes(pags, p.id, mes);
       linhas.push([
         p.apelido || p.nome,
         STATUS_LABEL[st],
-        pg ? Number(pg.valor) : Number(p.valor_plano),
+        pg ? Number(pg.valor) : valorMensal(p, plano),
         pg ? pg.forma_pagamento : "",
         pg ? pg.data_pagamento : "",
       ]);
     });
     linhas.push([]);
 
-    const atrasados = inscritosMes.filter(
-      ({ participante: p }) => statusMensalista(pags, p.id, mes) === "atrasado",
+    const atrasados = doMes.filter(
+      (p) => statusMensalista(pags, p.id, mes, plano.diaVencimento) === "atrasado",
     );
     linhas.push([`MENSALISTAS EM ATRASO (${atrasados.length})`]);
-    linhas.push(["Nome", "Valor devido"]);
-    atrasados.forEach(({ participante: p }) => {
-      linhas.push([p.apelido || p.nome, Number(p.valor_plano)]);
+    linhas.push(["Nome", "Valor devido", "Telefone"]);
+    atrasados.forEach((p) => {
+      linhas.push([p.apelido || p.nome, valorMensal(p, plano), p.telefone ?? ""]);
     });
     linhas.push([]);
 
     linhas.push(["ANUAIS"]);
     linhas.push(["Nome", "Status", "Ciclo", "Valor", "Data pagamento"]);
     anuais.forEach((p) => {
-      const ciclo = cicloAnual(p);
-      const pg = pagamentoDoMes(pags, p.id, ciclo.referencia);
+      const pg = pagamentoAnual(pags, p.id, ano);
       linhas.push([
         p.apelido || p.nome,
-        statusAnual(pags, p) === "pago" ? "Pago" : "Em atraso",
-        ciclo.referencia,
-        pg ? Number(pg.valor) : Number(p.valor_plano),
+        statusAnual(pags, p, ano) === "pago" ? "Pago" : "Em atraso",
+        ano,
+        pg ? Number(pg.valor) : valorAnuidade(p, plano),
         pg ? pg.data_pagamento : "",
       ]);
     });
@@ -311,14 +257,14 @@ function Pagamentos() {
     toast.success("Relatório gerado.");
   };
 
-  const carregando = participantes.isLoading || pagamentos.isLoading || inscricoes.isLoading;
+  const carregando = participantes.isLoading || pagamentos.isLoading;
 
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-3xl leading-none">Pagamentos</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Marque quem já acertou a mensalidade ou a anuidade.
+          A lista do mês é automática: quem está na temporada aparece aqui.
         </p>
       </div>
 
@@ -334,36 +280,48 @@ function Pagamentos() {
 
         <TabsContent value="mensal" className="space-y-4">
           <div className="flex items-center justify-between rounded-xl border bg-card p-2">
-            <Button variant="ghost" size="icon" onClick={() => mudarMes(-1)} aria-label="Mês anterior">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => mudarMes(-1)}
+              aria-label="Mês anterior"
+            >
               <ChevronLeft className="size-4" />
             </Button>
             <div className="text-center">
               <p className="font-display text-lg font-bold uppercase">{monthLabel(mes)}</p>
               <p className="text-xs text-muted-foreground">
-                {resumoMes.pagos}/{inscritosMes.length} pagos · {brl(resumoMes.total)} arrecadado
+                {resumoMes.pagos}/{doMes.length} pagos · {brl(resumoMes.total)} de{" "}
+                {brl(resumoMes.previsto)}
               </p>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => mudarMes(1)} aria-label="Próximo mês">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => mudarMes(1)}
+              aria-label="Próximo mês"
+            >
               <ChevronRight className="size-4" />
             </Button>
           </div>
 
-          <Button variant="outline" className="w-full" onClick={abrirAdicionar}>
-            <UserPlus className="size-4" /> Adicionar participantes ao mês
-          </Button>
-
-          <Button variant="outline" className="w-full" onClick={emitirRelatorio}>
-            <FileDown className="size-4" /> Baixar relatório do mês
-          </Button>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button variant="outline" onClick={marcarTodos} disabled={salvar.isPending}>
+              <CalendarCheck className="size-4" /> Marcar todos como pagos
+            </Button>
+            <Button variant="outline" onClick={emitirRelatorio}>
+              <FileDown className="size-4" /> Baixar relatório do mês
+            </Button>
+          </div>
 
           {carregando ? (
             <Skeleton className="h-40 rounded-xl" />
-          ) : inscritosMes.length === 0 ? (
-            <Vazio texto="Nenhum mensalista inscrito neste mês. Adicione quem vai participar." />
+          ) : doMes.length === 0 ? (
+            <Vazio texto="Nenhum mensalista na temporada neste mês. Confira as datas de entrada em Participantes." />
           ) : (
             <div className="space-y-2">
-              {inscritosMes.map(({ inscricao, participante: p }) => {
-                const status = statusMensalista(pags, p.id, mes);
+              {doMes.map((p) => {
+                const status = statusMensalista(pags, p.id, mes, plano.diaVencimento);
                 const pago = pagamentoDoMes(pags, p.id, mes);
                 return (
                   <LinhaPagamento
@@ -373,12 +331,11 @@ function Pagamentos() {
                     detalhe={
                       pago
                         ? `${formatDate(pago.data_pagamento)} · ${pago.forma_pagamento}`
-                        : `Vence dia 10 · ${brl(Number(p.valor_plano))}`
+                        : `Vence dia ${plano.diaVencimento} · ${brl(valorMensal(p, plano))}`
                     }
-                    valor={pago ? Number(pago.valor) : Number(p.valor_plano)}
-                    onMarcar={() => abrirCobranca(p, mes)}
+                    valor={pago ? Number(pago.valor) : valorMensal(p, plano)}
+                    onMarcar={() => abrirCobranca(p, mes, valorMensal(p, plano))}
                     onDesfazer={pago ? () => desfazer(pago.id) : undefined}
-                    onRemover={!pago ? () => removerDoMes(inscricao.id) : undefined}
                     statusAno={badgeAno(p)}
                   />
                 );
@@ -394,9 +351,8 @@ function Pagamentos() {
             <Vazio texto="Nenhum participante com plano anual." />
           ) : (
             anuais.map((p) => {
-              const ciclo = cicloAnual(p);
-              const status = statusAnual(pags, p);
-              const pago = pagamentoDoMes(pags, p.id, ciclo.referencia);
+              const status = statusAnual(pags, p, ano);
+              const pago = pagamentoAnual(pags, p.id, ano);
               return (
                 <LinhaPagamento
                   key={p.id}
@@ -404,11 +360,11 @@ function Pagamentos() {
                   status={status}
                   detalhe={
                     pago
-                      ? `Ciclo ${ciclo.referencia} · pago em ${formatDate(pago.data_pagamento)}`
-                      : `Ciclo ${ciclo.referencia} · vence ${ciclo.vencimento.toLocaleDateString("pt-BR")}`
+                      ? `Anuidade ${ano} · paga em ${formatDate(pago.data_pagamento)}`
+                      : `Anuidade ${ano} · ${brl(valorAnuidade(p, plano))} (${brl(valorMensal(p, plano))}/mês)`
                   }
-                  valor={pago ? Number(pago.valor) : Number(p.valor_plano)}
-                  onMarcar={() => abrirCobranca(p, ciclo.referencia)}
+                  valor={pago ? Number(pago.valor) : valorAnuidade(p, plano)}
+                  onMarcar={() => abrirCobranca(p, String(ano), valorAnuidade(p, plano))}
                   onDesfazer={pago ? () => desfazer(pago.id) : undefined}
                   statusAno={badgeAno(p)}
                 />
@@ -427,7 +383,8 @@ function Pagamentos() {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Referência: <span className="font-medium text-foreground">{cobranca?.referencia}</span>
+              Referência:{" "}
+              <span className="font-medium text-foreground">{cobranca?.referencia}</span>
             </p>
             <div className="space-y-1.5">
               <Label htmlFor="valor-pag">Valor (R$)</Label>
@@ -473,51 +430,6 @@ function Pagamentos() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <Dialog open={addAberto} onOpenChange={setAddAberto}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Adicionar participantes — {monthLabel(mes)}</DialogTitle>
-          </DialogHeader>
-          <div className="max-h-[50vh] space-y-1.5 overflow-y-auto">
-            {naoInscritos.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                Todos os participantes já estão neste mês.
-              </p>
-            ) : (
-              naoInscritos.map((p) => (
-                <label
-                  key={p.id}
-                  className="flex cursor-pointer items-center gap-3 rounded-lg border p-2"
-                >
-                  <Checkbox
-                    checked={selecionados.has(p.id)}
-                    onCheckedChange={() => toggleSelecionado(p.id)}
-                  />
-                  <AvatarParticipante nome={p.nome} foto={p.foto_url} className="size-8 text-xs" />
-                  <span className="flex-1 truncate text-sm font-medium">
-                    {p.apelido || p.nome}
-                  </span>
-                  <span className="stat-num text-xs text-muted-foreground">
-                    {brl(Number(p.valor_plano))}
-                  </span>
-                </label>
-              ))
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddAberto(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={confirmarAdicao}
-              disabled={addInscricoes.isPending || selecionados.size === 0}
-            >
-              Adicionar{selecionados.size > 0 ? ` (${selecionados.size})` : ""}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -529,7 +441,6 @@ function LinhaPagamento({
   valor,
   onMarcar,
   onDesfazer,
-  onRemover,
   statusAno,
 }: {
   participante: Participante;
@@ -538,7 +449,6 @@ function LinhaPagamento({
   valor: number;
   onMarcar: () => void;
   onDesfazer?: (() => void) | undefined;
-  onRemover?: (() => void) | undefined;
   statusAno?: { label: string; cls: string };
 }) {
   return (
@@ -576,22 +486,17 @@ function LinhaPagamento({
           </span>
           <span className="stat-num hidden text-sm sm:inline">{brl(valor)}</span>
           {onDesfazer ? (
-            <Button variant="ghost" size="icon" onClick={onDesfazer} aria-label="Desfazer pagamento">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onDesfazer}
+              aria-label="Desfazer pagamento"
+            >
               <Undo2 className="size-4" />
             </Button>
           ) : (
             <Button size="icon" onClick={onMarcar} aria-label="Marcar como pago">
               <Check className="size-4" />
-            </Button>
-          )}
-          {onRemover && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onRemover}
-              aria-label="Remover do mês"
-            >
-              <X className="size-4 text-muted-foreground" />
             </Button>
           )}
         </div>

@@ -11,6 +11,7 @@ import {
   UserPlus,
   ShieldCheck,
   Building2,
+  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -28,7 +29,7 @@ import {
   type PapelMembro,
 } from "@/lib/org";
 import { brl, todayISO } from "@/lib/format";
-import { baixarCSV, DIA_VENCIMENTO } from "@/lib/status";
+import { baixarCSV } from "@/lib/status";
 import { EscolherCor, EscolherIcone } from "@/components/sistema";
 import { MarcaIcone } from "@/components/marca";
 import { UploadArquivo } from "@/components/foto";
@@ -83,15 +84,44 @@ function Configuracoes() {
 
   const exportarParticipantes = () => {
     const linhas: (string | number)[][] = [
-      ["Nome", "Apelido", "WhatsApp", "Nascimento", "Plano", "Valor", "Entrada", "Status"],
+      [
+        "Cód.",
+        "Nome",
+        "Apelido",
+        "WhatsApp",
+        "E-mail",
+        "Nascimento",
+        "Plano",
+        "Valor personalizado",
+        "Entrada",
+        "Saída",
+        "Nº camisa",
+        "Nome na camisa",
+        "Tamanho",
+        "Contato emergência",
+        "Telefone emergência",
+        "Parentesco",
+        "Indicado por",
+        "Status",
+      ],
       ...(participantes.data ?? []).map((p) => [
+        p.codigo ?? "",
         p.nome,
         p.apelido ?? "",
         p.telefone ?? "",
+        p.email ?? "",
         p.data_nascimento ?? "",
         p.tipo_plano,
-        Number(p.valor_plano),
+        p.valor_plano != null ? Number(p.valor_plano) : "",
         p.data_entrada,
+        p.data_saida ?? "",
+        p.numero ?? "",
+        p.nome_camisa ?? "",
+        p.tamanho_camisa ?? "",
+        p.contato_nome ?? "",
+        p.contato_telefone ?? "",
+        p.contato_parentesco ?? "",
+        p.indicado_por ?? "",
         p.status,
       ]),
     ];
@@ -114,6 +144,8 @@ function Configuracoes() {
       </div>
 
       <IdentidadeSistema />
+
+      <PlanosEValores />
 
       {podeAdministrar && <Membros />}
 
@@ -223,12 +255,147 @@ function Configuracoes() {
         <CardContent className="flex gap-3 p-4 text-sm text-muted-foreground">
           <Info className="mt-0.5 size-4 shrink-0" />
           <p>
-            Mensalidades vencem no dia {DIA_VENCIMENTO} de cada mês. Planos anuais vencem na data de
-            aniversário de entrada do participante na pelada.
+            As vagas abrem em janeiro: quem entra é cobrado automaticamente todos os meses até a
+            data de saída. Não é preciso inscrever ninguém mês a mês.
           </p>
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/* ---------------------------- planos e valores -------------------------- */
+
+function PlanosEValores() {
+  const { org, podeAdministrar } = useOrg();
+  const salvar = useSalvarOrganizacao();
+  const participantes = useParticipantes();
+
+  const [mensalista, setMensalista] = useState("");
+  const [anual, setAnual] = useState("");
+  const [cota, setCota] = useState("");
+  const [dia, setDia] = useState("");
+
+  useEffect(() => {
+    if (!org) return;
+    setMensalista(String(org.valor_mensalista ?? 30));
+    setAnual(String(org.valor_anual ?? 330));
+    setCota(String(org.cota ?? 43));
+    setDia(String(org.dia_vencimento ?? 10));
+  }, [org]);
+
+  if (!org) return null;
+
+  const num = (v: string) => Number(v.replace(",", "."));
+  const alterado =
+    num(mensalista) !== Number(org.valor_mensalista) ||
+    num(anual) !== Number(org.valor_anual) ||
+    num(cota) !== Number(org.cota) ||
+    num(dia) !== Number(org.dia_vencimento);
+
+  const lista = participantes.data ?? [];
+  const qtdMensalistas = lista.filter(
+    (p) => p.status === "ativo" && p.tipo_plano === "mensalista",
+  ).length;
+  const qtdAnuais = lista.filter((p) => p.status === "ativo" && p.tipo_plano === "anual").length;
+  const excecoes = lista.filter((p) => p.status === "ativo" && p.valor_plano != null).length;
+
+  const submeter = async () => {
+    const valores = [num(mensalista), num(anual), num(cota)];
+    if (valores.some((v) => !Number.isFinite(v) || v < 0)) {
+      toast.error("Informe valores válidos.");
+      return;
+    }
+    const d = num(dia);
+    if (!Number.isInteger(d) || d < 1 || d > 28) {
+      toast.error("O dia de vencimento vai de 1 a 28.");
+      return;
+    }
+    try {
+      await salvar.mutateAsync({
+        id: org.id,
+        valor_mensalista: valores[0]!,
+        valor_anual: valores[1]!,
+        cota: valores[2]!,
+        dia_vencimento: d,
+      });
+      toast.success("Valores atualizados para todo mundo.");
+    } catch {
+      toast.error("Não foi possível salvar.");
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Wallet className="size-4 text-primary" /> Planos e valores
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Valem para todos os atletas do sistema. Alterar aqui atualiza as cobranças de uma vez —
+          pagamentos já registrados mantêm o valor pago na época.
+        </p>
+        <fieldset disabled={!podeAdministrar} className="space-y-4 disabled:opacity-60">
+          <div className="grid gap-4 sm:grid-cols-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="v-mensalista">Mensalista (R$/mês)</Label>
+              <Input
+                id="v-mensalista"
+                inputMode="decimal"
+                value={mensalista}
+                onChange={(e) => setMensalista(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">{qtdMensalistas} atletas</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="v-anual">Anuidade (R$/ano)</Label>
+              <Input
+                id="v-anual"
+                inputMode="decimal"
+                value={anual}
+                onChange={(e) => setAnual(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                {qtdAnuais} atletas · {brl(num(anual) / 12 || 0)}/mês
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="v-cota">Cota (R$)</Label>
+              <Input
+                id="v-cota"
+                inputMode="decimal"
+                value={cota}
+                onChange={(e) => setCota(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">Valor de referência do clube</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="v-dia">Vencimento (dia)</Label>
+              <Input
+                id="v-dia"
+                inputMode="numeric"
+                value={dia}
+                onChange={(e) => setDia(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">De 1 a 28</p>
+            </div>
+          </div>
+
+          {excecoes > 0 && (
+            <p className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
+              {excecoes} {excecoes === 1 ? "atleta tem" : "atletas têm"} valor personalizado e não{" "}
+              {excecoes === 1 ? "será afetado" : "serão afetados"} por esta alteração.
+            </p>
+          )}
+
+          <Button onClick={submeter} disabled={!alterado || salvar.isPending}>
+            {salvar.isPending && <Loader2 className="size-4 animate-spin" />} Aplicar a todos
+          </Button>
+        </fieldset>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -324,9 +491,7 @@ function IdentidadeSistema() {
           <div className="space-y-1.5">
             <Label>Ícone</Label>
             <EscolherIcone value={icone} onChange={setIcone} />
-            <p className="text-xs text-muted-foreground">
-              Usado quando não há logo enviada.
-            </p>
+            <p className="text-xs text-muted-foreground">Usado quando não há logo enviada.</p>
           </div>
 
           <div className="space-y-1.5">
@@ -336,12 +501,7 @@ function IdentidadeSistema() {
 
           <div className="space-y-1.5">
             <Label>Logo (opcional)</Label>
-            <UploadArquivo
-              value={logo}
-              onChange={setLogo}
-              pasta="marca"
-              label="Enviar logo"
-            />
+            <UploadArquivo value={logo} onChange={setLogo} pasta="marca" label="Enviar logo" />
           </div>
 
           <div className="flex flex-wrap gap-2">

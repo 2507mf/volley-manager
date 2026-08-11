@@ -25,6 +25,10 @@ export type Database = {
           logo_url: string | null
           nome: string
           updated_at: string
+          valor_mensalista: number
+          valor_anual: number
+          cota: number
+          dia_vencimento: number
         }
         Insert: {
           cor?: string
@@ -36,6 +40,10 @@ export type Database = {
           logo_url?: string | null
           nome: string
           updated_at?: string
+          valor_mensalista?: number
+          valor_anual?: number
+          cota?: number
+          dia_vencimento?: number
         }
         Update: {
           cor?: string
@@ -47,6 +55,10 @@ export type Database = {
           logo_url?: string | null
           nome?: string
           updated_at?: string
+          valor_mensalista?: number
+          valor_anual?: number
+          cota?: number
+          dia_vencimento?: number
         }
         Relationships: []
       }
@@ -141,41 +153,6 @@ export type Database = {
         }
         Relationships: []
       }
-      inscricoes_mensais: {
-        Row: {
-          created_at: string
-          id: string
-          organizacao_id: string
-          participante_id: string
-          referencia: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          organizacao_id?: string
-          participante_id: string
-          referencia: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          organizacao_id?: string
-          participante_id?: string
-          referencia?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inscricoes_mensais_participante_id_fkey"
-            columns: ["participante_id"]
-            isOneToOne: false
-            referencedRelation: "participantes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       pagamentos: {
         Row: {
           created_at: string
@@ -239,7 +216,16 @@ export type Database = {
           tipo_plano: Database["public"]["Enums"]["tipo_plano"]
           updated_at: string
           user_id: string
-          valor_plano: number
+          codigo: number | null
+          email: string | null
+          nome_camisa: string | null
+          tamanho_camisa: string | null
+          contato_nome: string | null
+          contato_telefone: string | null
+          contato_parentesco: string | null
+          indicado_por: string | null
+          data_saida: string | null
+          valor_plano: number | null
         }
         Insert: {
           apelido?: string | null
@@ -256,7 +242,16 @@ export type Database = {
           tipo_plano?: Database["public"]["Enums"]["tipo_plano"]
           updated_at?: string
           user_id: string
-          valor_plano?: number
+          codigo?: number | null
+          email?: string | null
+          nome_camisa?: string | null
+          tamanho_camisa?: string | null
+          contato_nome?: string | null
+          contato_telefone?: string | null
+          contato_parentesco?: string | null
+          indicado_por?: string | null
+          data_saida?: string | null
+          valor_plano?: number | null
         }
         Update: {
           apelido?: string | null
@@ -273,7 +268,16 @@ export type Database = {
           tipo_plano?: Database["public"]["Enums"]["tipo_plano"]
           updated_at?: string
           user_id?: string
-          valor_plano?: number
+          codigo?: number | null
+          email?: string | null
+          nome_camisa?: string | null
+          tamanho_camisa?: string | null
+          contato_nome?: string | null
+          contato_telefone?: string | null
+          contato_parentesco?: string | null
+          indicado_por?: string | null
+          data_saida?: string | null
+          valor_plano?: number | null
         }
         Relationships: []
       }
