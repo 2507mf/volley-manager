@@ -2,7 +2,8 @@ import type { Participante, Pagamento } from "./pelada";
 import type { Organizacao } from "./org";
 import { monthKey, parseDate } from "./format";
 
-export const DIA_VENCIMENTO_PADRAO = 10;
+/** Dia de cobrança da mensalidade — o padrão segue a planilha do VÔLEI 6. */
+export const DIA_VENCIMENTO_PADRAO = 11;
 
 /** Regras de cobrança da organização (valores e vencimento configuráveis). */
 export type Plano = {
