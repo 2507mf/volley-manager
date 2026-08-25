@@ -1,6 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Check, Undo2, FileDown, CalendarCheck } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  Undo2,
+  FileDown,
+  CalendarCheck,
+  Search,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -66,6 +75,32 @@ export const Route = createFileRoute("/_authenticated/pagamentos")({
   component: Pagamentos,
 });
 
+/** Recortes da lista do mês. O resumo e o relatório continuam sendo do mês inteiro. */
+const STATUS_MES = [
+  { value: "todos", label: "Todos" },
+  { value: "pago", label: "Pagos" },
+  { value: "pendente", label: "Pendentes" },
+  { value: "atrasado", label: "Atrasados" },
+] as const;
+
+const STATUS_ANO = [
+  { value: "todos", label: "Todos" },
+  { value: "pago", label: "Pagos" },
+  { value: "atrasado", label: "Em atraso" },
+] as const;
+
+type FiltroMes = (typeof STATUS_MES)[number]["value"];
+type FiltroAno = (typeof STATUS_ANO)[number]["value"];
+
+const combina = (
+  p: { nome: string; apelido: string | null; codigo: number | null },
+  termo: string,
+) =>
+  !termo ||
+  p.nome.toLowerCase().includes(termo) ||
+  (p.apelido ?? "").toLowerCase().includes(termo) ||
+  String(p.codigo ?? "").includes(termo);
+
 type Cobranca = {
   participante: Participante;
   referencia: string;
@@ -88,6 +123,9 @@ function Pagamentos() {
   const [valor, setValor] = useState("");
   const [data, setData] = useState(todayISO());
   const [forma, setForma] = useState<FormaPagamento>("pix");
+  const [busca, setBusca] = useState("");
+  const [filtroMes, setFiltroMes] = useState<FiltroMes>("todos");
+  const [filtroAno, setFiltroAno] = useState<FiltroAno>("todos");
 
   const parts = participantes.data ?? [];
   const ativos = parts.filter((p) => p.status === "ativo");
@@ -110,6 +148,36 @@ function Pagamentos() {
     const previsto = doMes.reduce((s, p) => s + valorMensal(p, plano), 0);
     return { pagos: pagos.length, total, previsto };
   }, [doMes, pags, mes, plano]);
+
+  const termo = busca.trim().toLowerCase();
+
+  const visiveisMes = useMemo(
+    () =>
+      doMes.filter(
+        (p) =>
+          combina(p, termo) &&
+          (filtroMes === "todos" ||
+            statusMensalista(pags, p.id, mes, plano.diaVencimento) === filtroMes),
+      ),
+    [doMes, termo, filtroMes, pags, mes, plano.diaVencimento],
+  );
+
+  const visiveisAnuais = useMemo(
+    () =>
+      anuais.filter(
+        (p) =>
+          combina(p, termo) && (filtroAno === "todos" || statusAnual(pags, p, ano) === filtroAno),
+      ),
+    [anuais, termo, filtroAno, pags, ano],
+  );
+
+  const filtrandoMes = termo !== "" || filtroMes !== "todos";
+  const filtrandoAno = termo !== "" || filtroAno !== "todos";
+  const limpar = () => {
+    setBusca("");
+    setFiltroMes("todos");
+    setFiltroAno("todos");
+  };
 
   const badgeAno = (p: Participante) => {
     const st = statusAtleta(pags, p, ano, plano.diaVencimento);
@@ -157,9 +225,10 @@ function Pagamentos() {
   };
 
   const marcarTodos = async () => {
-    const pendentes = doMes.filter((p) => !pagamentoDoMes(pags, p.id, mes));
+    // age sobre o que está visível: se há filtro, marca só esses
+    const pendentes = visiveisMes.filter((p) => !pagamentoDoMes(pags, p.id, mes));
     if (pendentes.length === 0) {
-      toast.info("Todo mundo já está pago neste mês.");
+      toast.info("Ninguém pendente na lista atual.");
       return;
     }
     try {
@@ -325,6 +394,35 @@ function Pagamentos() {
             </Button>
           </div>
 
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative min-w-[180px] flex-1">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Buscar atleta"
+                className="pl-9"
+              />
+            </div>
+            <Select value={filtroMes} onValueChange={(v) => setFiltroMes(v as FiltroMes)}>
+              <SelectTrigger className="w-[150px]" aria-label="Filtrar por situação">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_MES.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {filtrandoMes && (
+              <Button variant="ghost" size="sm" onClick={limpar}>
+                <X className="size-4" /> Limpar
+              </Button>
+            )}
+          </div>
+
           <div className="grid gap-2 sm:grid-cols-2">
             <Button variant="outline" onClick={marcarTodos} disabled={salvar.isPending}>
               <CalendarCheck className="size-4" /> Marcar todos como pagos
@@ -336,11 +434,22 @@ function Pagamentos() {
 
           {carregando ? (
             <Skeleton className="h-40 rounded-xl" />
-          ) : doMes.length === 0 ? (
-            <Vazio texto="Nenhum mensalista na temporada neste mês. Confira as datas de entrada em Participantes." />
+          ) : visiveisMes.length === 0 ? (
+            <Vazio
+              texto={
+                filtrandoMes
+                  ? "Nenhum atleta neste recorte. Ajuste a busca ou o filtro."
+                  : "Nenhum mensalista na temporada neste mês. Confira as datas de entrada em Participantes."
+              }
+            />
           ) : (
             <div className="space-y-2">
-              {doMes.map((p) => {
+              {filtrandoMes && (
+                <p className="text-xs text-muted-foreground">
+                  Mostrando {visiveisMes.length} de {doMes.length} atletas.
+                </p>
+              )}
+              {visiveisMes.map((p) => {
                 const status = statusMensalista(pags, p.id, mes, plano.diaVencimento);
                 const pago = pagamentoDoMes(pags, p.id, mes);
                 return (
@@ -365,31 +474,73 @@ function Pagamentos() {
         </TabsContent>
 
         <TabsContent value="anual" className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative min-w-[180px] flex-1">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Buscar atleta"
+                className="pl-9"
+              />
+            </div>
+            <Select value={filtroAno} onValueChange={(v) => setFiltroAno(v as FiltroAno)}>
+              <SelectTrigger className="w-[150px]" aria-label="Filtrar por situação">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_ANO.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {filtrandoAno && (
+              <Button variant="ghost" size="sm" onClick={limpar}>
+                <X className="size-4" /> Limpar
+              </Button>
+            )}
+          </div>
+
           {carregando ? (
             <Skeleton className="h-40 rounded-xl" />
-          ) : anuais.length === 0 ? (
-            <Vazio texto="Nenhum participante com plano anual." />
+          ) : visiveisAnuais.length === 0 ? (
+            <Vazio
+              texto={
+                filtrandoAno
+                  ? "Nenhum atleta neste recorte. Ajuste a busca ou o filtro."
+                  : "Nenhum participante com plano anual."
+              }
+            />
           ) : (
-            anuais.map((p) => {
-              const status = statusAnual(pags, p, ano);
-              const pago = pagamentoAnual(pags, p.id, ano);
-              return (
-                <LinhaPagamento
-                  key={p.id}
-                  participante={p}
-                  status={status}
-                  detalhe={
-                    pago
-                      ? `Anuidade ${ano} · paga em ${formatDate(pago.data_pagamento)}`
-                      : `Anuidade ${ano} · ${brl(valorAnuidade(p, plano))} (${brl(valorMensal(p, plano))}/mês)`
-                  }
-                  valor={pago ? Number(pago.valor) : valorAnuidade(p, plano)}
-                  onMarcar={() => abrirCobranca(p, String(ano), valorAnuidade(p, plano))}
-                  onDesfazer={pago ? () => desfazer(pago.id) : undefined}
-                  statusAno={badgeAno(p)}
-                />
-              );
-            })
+            <>
+              {filtrandoAno && (
+                <p className="text-xs text-muted-foreground">
+                  Mostrando {visiveisAnuais.length} de {anuais.length} atletas.
+                </p>
+              )}
+              {visiveisAnuais.map((p) => {
+                const status = statusAnual(pags, p, ano);
+                const pago = pagamentoAnual(pags, p.id, ano);
+                return (
+                  <LinhaPagamento
+                    key={p.id}
+                    participante={p}
+                    status={status}
+                    detalhe={
+                      pago
+                        ? `Anuidade ${ano} · paga em ${formatDate(pago.data_pagamento)}`
+                        : `Anuidade ${ano} · ${brl(valorAnuidade(p, plano))} (${brl(valorMensal(p, plano))}/mês)`
+                    }
+                    valor={pago ? Number(pago.valor) : valorAnuidade(p, plano)}
+                    onMarcar={() => abrirCobranca(p, String(ano), valorAnuidade(p, plano))}
+                    onDesfazer={pago ? () => desfazer(pago.id) : undefined}
+                    statusAno={badgeAno(p)}
+                  />
+                );
+              })}
+            </>
           )}
         </TabsContent>
       </Tabs>
