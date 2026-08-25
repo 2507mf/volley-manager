@@ -162,6 +162,19 @@ function Pagamentos() {
     [anuais, termo, filtroAno, pags, ano],
   );
 
+  const rotuloRecorte = [
+    filtroMes !== "todos"
+      ? `mensalistas: ${STATUS_MES.find((x) => x.value === filtroMes)?.label}`
+      : null,
+    filtroAno !== "todos"
+      ? `anuais: ${STATUS_ANO.find((x) => x.value === filtroAno)?.label}`
+      : null,
+    termo ? `busca "${busca.trim()}"` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const filtrando = rotuloRecorte !== "";
+
   const filtrandoMes = termo !== "" || filtroMes !== "todos";
   const filtrandoAno = termo !== "" || filtroAno !== "todos";
   const limpar = () => {
@@ -224,17 +237,19 @@ function Pagamentos() {
     const totalSai = gastosMes.reduce((s, g) => s + Number(g.valor), 0);
     const totalEnt = totalMens + totalRec;
 
-    const atrasados = doMes.filter(
+    const atrasados = visiveisMes.filter(
       (p) => statusMensalista(pags, p.id, mes, plano.diaVencimento) === "atrasado",
     );
 
     abrirRelatorio({
-      nome: `relatorio-${mes}`,
+      nome: filtrando ? `relatorio-${mes}-filtrado` : `relatorio-${mes}`,
       titulo: `Pagamentos — ${monthLabel(mes)}`,
-      subtitulo: `${resumoMes.pagos} de ${doMes.length} mensalistas pagos · vencimento dia ${plano.diaVencimento}`,
+      subtitulo: filtrando
+        ? `Recorte — ${rotuloRecorte}`
+        : `${resumoMes.pagos} de ${doMes.length} mensalistas pagos · vencimento dia ${plano.diaVencimento}`,
       secoes: [
         {
-          titulo: "Resumo",
+          titulo: "Resumo do mês",
           linhas: [
             ["Mensalidades e anuidades recebidas", brl(totalMens)],
             ["Outras entradas", brl(totalRec)],
@@ -245,10 +260,12 @@ function Pagamentos() {
           totalNoFim: true,
         },
         {
-          titulo: `Mensalistas do mês (${doMes.length})`,
+          titulo: filtrando
+            ? `Mensalistas — ${visiveisMes.length} de ${doMes.length}`
+            : `Mensalistas do mês (${doMes.length})`,
           colunas: ["Atleta", "Situação", "Valor", "Forma", "Pago em"],
           numericas: [2],
-          linhas: doMes.map((p) => {
+          linhas: visiveisMes.map((p) => {
             const pg = pagamentoDoMes(pags, p.id, mes);
             return [
               p.apelido || p.nome,
@@ -258,7 +275,7 @@ function Pagamentos() {
               pg ? formatDate(pg.data_pagamento) : "—",
             ];
           }),
-          vazio: "Nenhum mensalista na temporada neste mês.",
+          vazio: "Nenhum mensalista neste recorte.",
         },
         {
           titulo: `Em atraso (${atrasados.length})`,
@@ -272,10 +289,12 @@ function Pagamentos() {
           vazio: "Ninguém em atraso. ",
         },
         {
-          titulo: `Anuais (${anuais.length})`,
+          titulo: filtrando
+            ? `Anuais — ${visiveisAnuais.length} de ${anuais.length}`
+            : `Anuais (${anuais.length})`,
           colunas: ["Atleta", "Situação", "Anuidade", "Pago em"],
           numericas: [2],
-          linhas: anuais.map((p) => {
+          linhas: visiveisAnuais.map((p) => {
             const pg = pagamentoAnual(pags, p.id, ano);
             return [
               p.apelido || p.nome,
@@ -284,7 +303,7 @@ function Pagamentos() {
               pg ? formatDate(pg.data_pagamento) : "—",
             ];
           }),
-          vazio: "Nenhum participante com plano anual.",
+          vazio: "Nenhum anual neste recorte.",
         },
         {
           titulo: "Saídas do mês",
