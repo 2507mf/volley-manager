@@ -77,14 +77,13 @@ function Planilha() {
   const pagamentos = usePagamentos();
 
   const pags = pagamentos.data ?? [];
-  const ativos = useMemo(
-    () => (participantes.data ?? []).filter((p) => p.status === "ativo"),
-    [participantes.data],
-  );
+  // Registro do ano inteiro: inativos entram com o historico deles, em cinza,
+  // senao o total do ano fica menor que o da planilha do clube.
+  const atletas = useMemo(() => participantes.data ?? [], [participantes.data]);
 
   const linhasTodas = useMemo(
     () =>
-      ativos
+      atletas
         .map((p) => {
           const temporada = new Set(mesesDaTemporada(p, ano));
           const status = statusAtleta(pags, p, ano, plano.diaVencimento);
@@ -126,10 +125,10 @@ function Planilha() {
             }
           }
 
-          return { p, status, atraso, celulas, total };
+          return { p, status, atraso, celulas, total, inativo: p.status === "inativo" };
         })
         .sort((a, b) => (a.p.apelido || a.p.nome).localeCompare(b.p.apelido || b.p.nome, "pt-BR")),
-    [ativos, pags, ano, plano],
+    [atletas, pags, ano, plano],
   );
 
   const linhas = useMemo(() => {
@@ -183,9 +182,9 @@ function Planilha() {
           colunas: ["Cód.", "Atleta", "Situação", ...MESES.map((m) => m.slice(0, 3)), "Total"],
           numericas: Array.from({ length: 13 }, (_, i) => i + 3),
           linhas: [
-            ...linhas.map(({ p, status, atraso, celulas, total }) => [
+            ...linhas.map(({ p, status, atraso, celulas, total, inativo }) => [
               p.codigo ?? "",
-              p.apelido || p.nome,
+              `${p.apelido || p.nome}${inativo ? " (inativo)" : ""}`,
               rotuloSituacao(status, atraso),
               ...celulas.map((c) => c.texto),
               valorCompacto(total),
@@ -294,7 +293,7 @@ function Planilha() {
           <CardContent className="p-8 text-center text-sm text-muted-foreground">
             {filtrando
               ? "Nenhum atleta neste recorte. Ajuste os filtros acima."
-              : "Nenhum participante ativo cadastrado."}
+              : "Nenhum participante cadastrado."}
           </CardContent>
         </Card>
       ) : (
@@ -322,8 +321,8 @@ function Planilha() {
               </tr>
             </thead>
             <tbody>
-              {linhas.map(({ p, status, atraso, celulas, total }) => (
-                <tr key={p.id} className="border-t">
+              {linhas.map(({ p, status, atraso, celulas, total, inativo }) => (
+                <tr key={p.id} className={cn("border-t", inativo && "opacity-55 grayscale")}>
                   <td
                     className={cn(
                       "sticky left-0 z-10 border-r bg-card px-3 py-2",
@@ -339,6 +338,11 @@ function Planilha() {
                       <span className="whitespace-nowrap font-medium">
                         {p.codigo != null && <span className="mr-1 opacity-70">{p.codigo}.</span>}
                         {p.apelido || p.nome}
+                        {inativo && (
+                          <span className="ml-1.5 text-[10px] font-semibold uppercase opacity-70">
+                            inativo
+                          </span>
+                        )}
                       </span>
                     </div>
                   </td>

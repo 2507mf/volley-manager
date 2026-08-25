@@ -543,6 +543,8 @@ function Financeiro() {
           ? "Exibindo todos os lançamentos"
           : `Exibindo: ${monthLabel(filtroMes)}`}
       </p>
+
+      <DetalheGasto gasto={detalhe} onFechar={() => setDetalhe(null)} />
     </div>
   );
 }

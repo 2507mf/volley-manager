@@ -465,5 +465,10 @@ BEGIN
   ) AS g (codigo, referencia, valor, data_pagamento)
   JOIN public.participantes p
     ON p.organizacao_id = org_id AND p.codigo::text = g.codigo::text;
+
+  -- Confirma no console quanto entrou de verdade (esperado: 58 e 335).
+  RAISE NOTICE 'Confraria do Vôlei Recife: % participantes, % pagamentos.',
+    (SELECT count(*) FROM public.participantes WHERE organizacao_id = org_id),
+    (SELECT count(*) FROM public.pagamentos    WHERE organizacao_id = org_id);
 END;
 $cvr$;
