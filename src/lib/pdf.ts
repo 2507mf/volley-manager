@@ -13,6 +13,8 @@ export type SecaoPDF = {
   numericas?: number[];
   /** Destaca a última linha (usado para os totais). */
   totalNoFim?: boolean;
+  /** Pinta de vermelho a célula (mês vencido sem pagamento), como na planilha. */
+  emAtraso?: (linha: number, coluna: number) => boolean;
   vazio?: string;
 };
 
@@ -37,6 +39,7 @@ const TINTA = [17, 17, 17] as const;
 const CINZA = [122, 122, 118] as const;
 const LINHA = [226, 226, 222] as const;
 const ZEBRA = [250, 250, 248] as const;
+const ATRASO = [253, 230, 230] as const;
 
 const hexParaRgb = (hex: string): [number, number, number] => {
   const n = parseInt(hex.replace("#", ""), 16);
@@ -216,6 +219,9 @@ export function montarPDF({ titulo, subtitulo, paisagem, secoes, marca }: Relato
       ),
       didParseCell: (data) => {
         if (data.section === "head") data.cell.text = data.cell.text.map((t) => t.toUpperCase());
+        if (data.section === "body" && secao.emAtraso?.(data.row.index, data.column.index)) {
+          data.cell.styles.fillColor = [...ATRASO];
+        }
         if (secao.totalNoFim && data.section === "body" && data.row.index === ultima) {
           data.cell.styles.fontStyle = "bold";
           data.cell.styles.fillColor = false;

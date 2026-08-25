@@ -25,6 +25,7 @@ export type Database = {
           logo_url: string | null
           nome: string
           updated_at: string
+          ficha_completa: boolean
           valor_mensalista: number
           valor_anual: number
           cota: number
@@ -40,6 +41,7 @@ export type Database = {
           logo_url?: string | null
           nome: string
           updated_at?: string
+          ficha_completa?: boolean
           valor_mensalista?: number
           valor_anual?: number
           cota?: number
@@ -55,6 +57,7 @@ export type Database = {
           logo_url?: string | null
           nome?: string
           updated_at?: string
+          ficha_completa?: boolean
           valor_mensalista?: number
           valor_anual?: number
           cota?: number
@@ -217,6 +220,13 @@ export type Database = {
           updated_at: string
           user_id: string
           codigo: number | null
+          posicao: string | null
+          profissao: string | null
+          area_atuacao: string | null
+          fator_rh: string | null
+          rg: string | null
+          orgao_rg: string | null
+          observacoes: string | null
           email: string | null
           nome_camisa: string | null
           tamanho_camisa: string | null
@@ -243,6 +253,13 @@ export type Database = {
           updated_at?: string
           user_id: string
           codigo?: number | null
+          posicao?: string | null
+          profissao?: string | null
+          area_atuacao?: string | null
+          fator_rh?: string | null
+          rg?: string | null
+          orgao_rg?: string | null
+          observacoes?: string | null
           email?: string | null
           nome_camisa?: string | null
           tamanho_camisa?: string | null
@@ -269,6 +286,13 @@ export type Database = {
           updated_at?: string
           user_id?: string
           codigo?: number | null
+          posicao?: string | null
+          profissao?: string | null
+          area_atuacao?: string | null
+          fator_rh?: string | null
+          rg?: string | null
+          orgao_rg?: string | null
+          observacoes?: string | null
           email?: string | null
           nome_camisa?: string | null
           tamanho_camisa?: string | null

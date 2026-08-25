@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, type ReactNode } from "react";
-import { Pencil, Plus, Search, Trash2, MessageCircle } from "lucide-react";
+import { Pencil, Plus, Search, Trash2, MessageCircle, UserMinus, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -14,6 +14,7 @@ import {
   type TipoPlano,
 } from "@/lib/pelada";
 import { brl, todayISO, whatsappLink } from "@/lib/format";
+import { useOrg } from "@/lib/org";
 import { AvatarParticipante, UploadArquivo } from "@/components/foto";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,6 +60,9 @@ export const Route = createFileRoute("/_authenticated/participantes")({
 
 const TAMANHOS = ["PP", "P", "M", "G", "GG", "XG"];
 const SEM_TAMANHO = "—";
+const SEM_VALOR = "—";
+const POSICOES = ["Atacante", "Levantador", "Líbero", "Central", "Oposto"];
+const SANGUE = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
 const schema = z.object({
   nome: z.string().trim().min(2, "Informe o nome").max(120),
@@ -87,6 +91,13 @@ type Form = {
   contato_telefone: string;
   contato_parentesco: string;
   indicado_por: string;
+  posicao: string;
+  profissao: string;
+  area_atuacao: string;
+  fator_rh: string;
+  rg: string;
+  orgao_rg: string;
+  observacoes: string;
   status: boolean;
   foto_url: string | null;
 };
@@ -110,11 +121,19 @@ const vazio = (): Form => ({
   contato_telefone: "",
   contato_parentesco: "",
   indicado_por: "",
+  posicao: "",
+  profissao: "",
+  area_atuacao: "",
+  fator_rh: "",
+  rg: "",
+  orgao_rg: "",
+  observacoes: "",
   status: true,
   foto_url: null,
 });
 
 function Participantes() {
+  const { org } = useOrg();
   const { data, isLoading } = useParticipantes();
   const plano = usePlano();
   const salvar = useSaveParticipante();
@@ -177,10 +196,36 @@ function Participantes() {
       contato_telefone: p.contato_telefone ?? "",
       contato_parentesco: p.contato_parentesco ?? "",
       indicado_por: p.indicado_por ?? "",
+      posicao: p.posicao ?? "",
+      profissao: p.profissao ?? "",
+      area_atuacao: p.area_atuacao ?? "",
+      fator_rh: p.fator_rh ?? "",
+      rg: p.rg ?? "",
+      orgao_rg: p.orgao_rg ?? "",
+      observacoes: p.observacoes ?? "",
       status: p.status === "ativo",
       foto_url: p.foto_url,
     });
     setAberto(true);
+  };
+
+  /** Inativo continua cadastrado, só sai das cobranças — e volta com um clique. */
+  const alternarStatus = async (p: Participante) => {
+    const ativando = p.status === "inativo";
+    try {
+      await salvar.mutateAsync({
+        id: p.id,
+        nome: p.nome,
+        status: ativando ? "ativo" : "inativo",
+      });
+      toast.success(
+        ativando
+          ? `${p.apelido || p.nome} voltou para a pelada.`
+          : `${p.apelido || p.nome} ficou inativo — segue cadastrado, fora das cobranças.`,
+      );
+    } catch {
+      toast.error("Não foi possível alterar a situação.");
+    }
   };
 
   const submeter = async () => {
@@ -219,6 +264,13 @@ function Participantes() {
         contato_telefone: form.contato_telefone.trim() || null,
         contato_parentesco: form.contato_parentesco.trim() || null,
         indicado_por: form.indicado_por.trim() || null,
+        posicao: form.posicao || null,
+        profissao: form.profissao.trim() || null,
+        area_atuacao: form.area_atuacao.trim() || null,
+        fator_rh: form.fator_rh || null,
+        rg: form.rg.trim() || null,
+        orgao_rg: form.orgao_rg.trim() || null,
+        observacoes: form.observacoes.trim() || null,
         status: form.status ? "ativo" : "inativo",
         foto_url: form.foto_url,
       });
@@ -277,7 +329,10 @@ function Participantes() {
           {lista.map((p) => {
             const zap = whatsappLink(p.telefone);
             return (
-              <Card key={p.id} className={p.status === "inativo" ? "opacity-60" : undefined}>
+              <Card
+                key={p.id}
+                className={p.status === "inativo" ? "opacity-55 grayscale" : undefined}
+              >
                 <CardContent className="flex items-center gap-3 p-4">
                   <AvatarParticipante nome={p.nome} foto={p.foto_url} className="size-12" />
                   <div className="min-w-0 flex-1">
@@ -295,6 +350,24 @@ function Participantes() {
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => alternarStatus(p)}
+                      disabled={salvar.isPending}
+                      title={
+                        p.status === "inativo"
+                          ? "Reativar na pelada"
+                          : "Marcar como inativo (segue cadastrado)"
+                      }
+                      aria-label={p.status === "inativo" ? "Reativar" : "Inativar"}
+                    >
+                      {p.status === "inativo" ? (
+                        <UserCheck className="size-4 text-success" />
+                      ) : (
+                        <UserMinus className="size-4" />
+                      )}
+                    </Button>
                     {zap && (
                       <Button variant="ghost" size="icon" asChild aria-label="WhatsApp">
                         <a href={zap} target="_blank" rel="noreferrer">
@@ -549,6 +622,85 @@ function Participantes() {
                 />
               </div>
             </Secao>
+
+            {org?.ficha_completa && (
+              <Secao titulo="Ficha completa">
+                <div className="grid gap-4 sm:grid-cols-6">
+                  <Campo label="Posição" className="sm:col-span-2">
+                    <Select
+                      value={form.posicao || SEM_VALOR}
+                      onValueChange={(v) => set("posicao", v === SEM_VALOR ? "" : v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={SEM_VALOR}>Não informada</SelectItem>
+                        {POSICOES.map((x) => (
+                          <SelectItem key={x} value={x}>
+                            {x}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Campo>
+                  <Campo label="Profissão" className="sm:col-span-4">
+                    <Input
+                      value={form.profissao}
+                      onChange={(e) => set("profissao", e.target.value)}
+                      maxLength={80}
+                    />
+                  </Campo>
+                  <Campo label="Área de atuação" className="sm:col-span-6">
+                    <Input
+                      value={form.area_atuacao}
+                      onChange={(e) => set("area_atuacao", e.target.value)}
+                      maxLength={160}
+                    />
+                  </Campo>
+                  <Campo label="Fator Rh" className="sm:col-span-2">
+                    <Select
+                      value={form.fator_rh || SEM_VALOR}
+                      onValueChange={(v) => set("fator_rh", v === SEM_VALOR ? "" : v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={SEM_VALOR}>Não informado</SelectItem>
+                        {SANGUE.map((x) => (
+                          <SelectItem key={x} value={x}>
+                            {x}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Campo>
+                  <Campo label="R.G." className="sm:col-span-2">
+                    <Input
+                      value={form.rg}
+                      onChange={(e) => set("rg", e.target.value)}
+                      maxLength={30}
+                    />
+                  </Campo>
+                  <Campo label="Órgão emissor" className="sm:col-span-2">
+                    <Input
+                      value={form.orgao_rg}
+                      onChange={(e) => set("orgao_rg", e.target.value)}
+                      placeholder="SDS/PE"
+                      maxLength={20}
+                    />
+                  </Campo>
+                  <Campo label="Observações" className="sm:col-span-6">
+                    <Input
+                      value={form.observacoes}
+                      onChange={(e) => set("observacoes", e.target.value)}
+                      maxLength={300}
+                    />
+                  </Campo>
+                </div>
+              </Secao>
+            )}
 
             <Secao titulo="Foto">
               <UploadArquivo

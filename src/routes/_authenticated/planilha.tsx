@@ -198,6 +198,11 @@ function Planilha() {
               valorCompacto(totalAno),
             ],
           ],
+          // as 3 primeiras colunas sao cod/atleta/situacao; os meses comecam na 3
+          emAtraso: (linha, coluna) =>
+            coluna >= 3 &&
+            coluna <= 14 &&
+            (linhas[linha]?.celulas[coluna - 3]?.classe.includes("destructive") ?? false),
           totalNoFim: true,
           vazio: "Nenhum atleta neste recorte.",
         },
