@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, FileDown, Search, X } from "lucide-react";
 import { usePagamentos, useParticipantes, usePlano } from "@/lib/pelada";
 import { useOrg } from "@/lib/org";
 import { useRelatorio } from "@/components/relatorio";
-import { brl, MESES } from "@/lib/format";
+import { MESES } from "@/lib/format";
 import {
   STATUS_ATLETA_CLASS,
   mesVencido,
@@ -159,15 +159,6 @@ function Planilha() {
     setFiltroPlano("todos");
   };
 
-  /** Vira subtítulo do PDF, para o relatório dizer de que recorte ele é. */
-  const descricaoFiltro = [
-    situacao !== "todos" ? SITUACOES.find((x) => x.value === situacao)?.label : null,
-    filtroPlano !== "todos" ? PLANOS_FILTRO.find((x) => x.value === filtroPlano)?.label : null,
-    busca.trim() ? `busca "${busca.trim()}"` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
   const totaisMes = useMemo(() => {
     const arr = Array.from({ length: 12 }, () => 0);
     linhas.forEach(({ celulas }) => {
@@ -186,13 +177,6 @@ function Planilha() {
     abrirRelatorio({
       nome: filtrando ? `planilha-${ano}-filtrada` : `planilha-${ano}`,
       titulo: `Controle e receita ${ano}`,
-      subtitulo: [
-        filtrando
-          ? `${linhas.length} de ${linhasTodas.length} atletas · ${descricaoFiltro}`
-          : `${linhas.length} atletas`,
-        `cota ${brl(plano.cota)}`,
-        `total ${brl(totalAno)}`,
-      ].join(" · "),
       paisagem: true,
       secoes: [
         {
