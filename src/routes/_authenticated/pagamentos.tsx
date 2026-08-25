@@ -1,15 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Check,
-  Undo2,
-  FileDown,
-  CalendarCheck,
-  Search,
-  X,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, Undo2, FileDown, Search, X } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -224,29 +215,6 @@ function Pagamentos() {
     toast.success("Pagamento removido.");
   };
 
-  const marcarTodos = async () => {
-    // age sobre o que está visível: se há filtro, marca só esses
-    const pendentes = visiveisMes.filter((p) => !pagamentoDoMes(pags, p.id, mes));
-    if (pendentes.length === 0) {
-      toast.info("Ninguém pendente na lista atual.");
-      return;
-    }
-    try {
-      for (const p of pendentes) {
-        await salvar.mutateAsync({
-          participante_id: p.id,
-          valor: valorMensal(p, plano),
-          data_pagamento: `${mes}-${String(plano.diaVencimento).padStart(2, "0")}`,
-          referencia: mes,
-          forma_pagamento: "pix",
-        });
-      }
-      toast.success(`${pendentes.length} pagamentos registrados.`);
-    } catch {
-      toast.error("Não foi possível registrar todos.");
-    }
-  };
-
   const emitirRelatorio = () => {
     const gastosMes = (gastos.data ?? []).filter((g) => g.data.slice(0, 7) === mes);
     const receitasMes = (receitas.data ?? []).filter((r) => r.data.slice(0, 7) === mes);
@@ -350,11 +318,16 @@ function Pagamentos() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-3xl leading-none">Pagamentos</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          A lista do mês é automática: quem está na temporada aparece aqui.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-3xl leading-none">Pagamentos</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            A lista do mês é automática: quem está na temporada aparece aqui.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={emitirRelatorio}>
+          <FileDown className="size-4" /> Relatório de {monthLabel(mes)}
+        </Button>
       </div>
 
       <Tabs defaultValue="mensal">
@@ -421,15 +394,6 @@ function Pagamentos() {
                 <X className="size-4" /> Limpar
               </Button>
             )}
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Button variant="outline" onClick={marcarTodos} disabled={salvar.isPending}>
-              <CalendarCheck className="size-4" /> Marcar todos como pagos
-            </Button>
-            <Button variant="outline" onClick={emitirRelatorio}>
-              <FileDown className="size-4" /> Relatório do mês (PDF)
-            </Button>
           </div>
 
           {carregando ? (
