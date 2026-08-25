@@ -17,10 +17,13 @@ export function ArquivoImg({
   path,
   alt,
   className,
+  link = true,
 }: {
   path?: string | null;
   alt: string;
   className?: string | undefined;
+  /** Quando a miniatura já está dentro de outro clicável, desliga o link. */
+  link?: boolean;
 }) {
   const { data: url, isLoading } = useArquivoUrl(path);
 
@@ -33,22 +36,22 @@ export function ArquivoImg({
     );
   }
 
+  const conteudo = ehPDF(path) ? (
+    <FileText className="size-5 text-muted-foreground" />
+  ) : (
+    <img src={url} alt={alt} loading="lazy" className="size-full object-cover" />
+  );
+  const estilo = cn(
+    "flex items-center justify-center overflow-hidden bg-muted",
+    link && "transition-opacity hover:opacity-80",
+    className,
+  );
+
+  if (!link) return <span className={estilo}>{conteudo}</span>;
+
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noreferrer"
-      title={`Abrir ${alt}`}
-      className={cn(
-        "group relative flex items-center justify-center overflow-hidden bg-muted transition-opacity hover:opacity-80",
-        className,
-      )}
-    >
-      {ehPDF(path) ? (
-        <FileText className="size-5 text-muted-foreground" />
-      ) : (
-        <img src={url} alt={alt} loading="lazy" className="size-full object-cover" />
-      )}
+    <a href={url} target="_blank" rel="noreferrer" title={`Abrir ${alt}`} className={estilo}>
+      {conteudo}
     </a>
   );
 }

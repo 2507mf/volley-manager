@@ -45,6 +45,7 @@ import { brl, formatDate, monthKey, monthLabel, todayISO } from "@/lib/format";
 import { useRelatorio } from "@/components/relatorio";
 import { useOrg } from "@/lib/org";
 import { ArquivoImg, UploadArquivo } from "@/components/foto";
+import { DetalheGasto } from "@/components/detalhe-gasto";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -110,6 +111,7 @@ function Financeiro() {
   const listaPagamentos = pagamentos.data ?? [];
 
   const [filtroMes, setFiltroMes] = useState<string>(monthKey(new Date()));
+  const [detalhe, setDetalhe] = useState<Gasto | null>(null);
 
   const mesesDisponiveis = useMemo(() => {
     const set = new Set<string>();
@@ -337,27 +339,35 @@ function Financeiro() {
           {gastosFiltrados.map((g) => (
             <Card key={g.id}>
               <CardContent className="flex items-center gap-3 p-3">
-                {g.comprovante_url ? (
-                  <ArquivoImg
-                    path={g.comprovante_url}
-                    alt="Comprovante"
-                    className="size-11 rounded-lg border object-cover"
-                  />
-                ) : (
-                  <span className="flex size-11 items-center justify-center rounded-lg bg-muted">
-                    <Paperclip className="size-4 text-muted-foreground" />
+                <button
+                  type="button"
+                  onClick={() => setDetalhe(g)}
+                  title="Ver detalhes da saída"
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left transition-opacity hover:opacity-70"
+                >
+                  {g.comprovante_url ? (
+                    <ArquivoImg
+                      path={g.comprovante_url}
+                      alt="Comprovante"
+                      link={false}
+                      className="size-11 shrink-0 rounded-lg border"
+                    />
+                  ) : (
+                    <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-muted">
+                      <Paperclip className="size-4 text-muted-foreground" />
+                    </span>
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold">{g.descricao}</span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {formatDate(g.data)} · {labelCategoriaGasto(g.categoria)}
+                      {g.responsavel ? ` · ${g.responsavel}` : ""}
+                    </span>
                   </span>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{g.descricao}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {formatDate(g.data)} · {labelCategoriaGasto(g.categoria)}
-                    {g.responsavel ? ` · ${g.responsavel}` : ""}
-                  </p>
-                </div>
-                <span className="stat-num shrink-0 text-sm text-destructive">
-                  -{brl(Number(g.valor))}
-                </span>
+                  <span className="stat-num shrink-0 text-sm text-destructive">
+                    -{brl(Number(g.valor))}
+                  </span>
+                </button>
                 <FormGasto
                   gasto={g}
                   categorias={categoriasGasto}
