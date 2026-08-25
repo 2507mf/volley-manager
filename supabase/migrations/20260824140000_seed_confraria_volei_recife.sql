@@ -16,7 +16,8 @@ DECLARE
   org_id  UUID;
   dono_id UUID;
 BEGIN
-  SELECT criado_por INTO dono_id FROM public.organizacoes WHERE nome = 'VÔLEI 6' ORDER BY created_at LIMIT 1;
+  SELECT criado_por INTO dono_id FROM public.organizacoes
+   WHERE upper(nome) = upper('VÔLEI 6') ORDER BY created_at LIMIT 1;
   IF dono_id IS NULL THEN
     SELECT id INTO dono_id FROM auth.users ORDER BY created_at LIMIT 1;
   END IF;
@@ -25,8 +26,9 @@ BEGIN
     RETURN;
   END IF;
 
+  -- Sem diferenciar maiusculas: a organizacao pode ter sido criada pela tela.
   SELECT id INTO org_id FROM public.organizacoes
-   WHERE nome = 'Confraria do Vôlei Recife' ORDER BY created_at LIMIT 1;
+   WHERE upper(nome) = upper('Confraria do Vôlei Recife') ORDER BY created_at LIMIT 1;
 
   IF org_id IS NULL THEN
     INSERT INTO public.organizacoes (nome, descricao, icone, cor, criado_por,
@@ -44,7 +46,7 @@ BEGIN
   INSERT INTO public.organizacao_membros (organizacao_id, user_id, papel)
   SELECT org_id, m.user_id, CASE WHEN m.user_id = dono_id THEN 'dono' ELSE m.papel END
   FROM public.organizacao_membros m
-  JOIN public.organizacoes o ON o.id = m.organizacao_id AND o.nome = 'VÔLEI 6'
+  JOIN public.organizacoes o ON o.id = m.organizacao_id AND upper(o.nome) = upper('VÔLEI 6')
   ON CONFLICT (organizacao_id, user_id) DO NOTHING;
 
   INSERT INTO public.organizacao_membros (organizacao_id, user_id, papel)

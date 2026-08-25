@@ -27,7 +27,7 @@ DECLARE
   org_id UUID;
 BEGIN
   SELECT id INTO org_id FROM public.organizacoes
-   WHERE nome = 'Confraria do Vôlei Recife' ORDER BY created_at LIMIT 1;
+   WHERE upper(nome) = upper('Confraria do Vôlei Recife') ORDER BY created_at LIMIT 1;
   IF org_id IS NULL THEN
     RAISE NOTICE 'Confraria não encontrada; rode antes a carga dela.';
     RETURN;
