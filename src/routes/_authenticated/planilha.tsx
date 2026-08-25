@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, FileDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileDown, Search, X } from "lucide-react";
 
 import { usePagamentos, useParticipantes, usePlano } from "@/lib/pelada";
 import { useOrg } from "@/lib/org";
@@ -20,7 +20,15 @@ import {
 import { AvatarParticipante } from "@/components/foto";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/planilha")({
@@ -39,11 +47,32 @@ const valorCompacto = (n: number) =>
 /** Célula de mês: valor pago, "x-x-x" fora da temporada, ou vazia se ainda não venceu. */
 type Celula = { texto: string; classe: string };
 
+/** Recortes da planilha. O PDF sai sempre com o recorte que está na tela. */
+const SITUACOES = [
+  { value: "todos", label: "Todas as situações" },
+  { value: "quitados", label: "Quitados (em dia e anuais)" },
+  { value: "atraso", label: "Em atraso (qualquer)" },
+  { value: "atraso1", label: "1 mês em atraso" },
+  { value: "atraso2", label: "2+ meses em atraso" },
+] as const;
+
+const PLANOS_FILTRO = [
+  { value: "todos", label: "Todos os planos" },
+  { value: "mensalista", label: "Mensalistas" },
+  { value: "anual", label: "Anuais" },
+] as const;
+
+type FiltroSituacao = (typeof SITUACOES)[number]["value"];
+type FiltroPlano = (typeof PLANOS_FILTRO)[number]["value"];
+
 function Planilha() {
   const { org } = useOrg();
   const { abrir: abrirRelatorio } = useRelatorio();
   const plano = usePlano();
   const [ano, setAno] = useState(new Date().getFullYear());
+  const [busca, setBusca] = useState("");
+  const [situacao, setSituacao] = useState<FiltroSituacao>("todos");
+  const [filtroPlano, setFiltroPlano] = useState<FiltroPlano>("todos");
   const participantes = useParticipantes();
   const pagamentos = usePagamentos();
 
@@ -53,7 +82,7 @@ function Planilha() {
     [participantes.data],
   );
 
-  const linhas = useMemo(
+  const linhasTodas = useMemo(
     () =>
       ativos
         .map((p) => {
@@ -103,6 +132,42 @@ function Planilha() {
     [ativos, pags, ano, plano],
   );
 
+  const linhas = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    return linhasTodas.filter(({ p, status }) => {
+      if (
+        termo &&
+        !p.nome.toLowerCase().includes(termo) &&
+        !(p.apelido ?? "").toLowerCase().includes(termo) &&
+        !String(p.codigo ?? "").includes(termo)
+      )
+        return false;
+      if (filtroPlano !== "todos" && p.tipo_plano !== filtroPlano) return false;
+      if (situacao === "quitados") return status === "em_dia" || status === "anual";
+      if (situacao === "atraso")
+        return status === "inadimplente" || status === "inadimplente_grave";
+      if (situacao === "atraso1") return status === "inadimplente";
+      if (situacao === "atraso2") return status === "inadimplente_grave";
+      return true;
+    });
+  }, [linhasTodas, busca, situacao, filtroPlano]);
+
+  const filtrando = situacao !== "todos" || filtroPlano !== "todos" || busca.trim() !== "";
+  const limparFiltros = () => {
+    setBusca("");
+    setSituacao("todos");
+    setFiltroPlano("todos");
+  };
+
+  /** Vira subtítulo do PDF, para o relatório dizer de que recorte ele é. */
+  const descricaoFiltro = [
+    situacao !== "todos" ? SITUACOES.find((x) => x.value === situacao)?.label : null,
+    filtroPlano !== "todos" ? PLANOS_FILTRO.find((x) => x.value === filtroPlano)?.label : null,
+    busca.trim() ? `busca "${busca.trim()}"` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   const totaisMes = useMemo(() => {
     const arr = Array.from({ length: 12 }, () => 0);
     linhas.forEach(({ celulas }) => {
@@ -119,9 +184,15 @@ function Planilha() {
 
   const emitirRelatorio = () => {
     abrirRelatorio({
-      nome: `planilha-${ano}`,
+      nome: filtrando ? `planilha-${ano}-filtrada` : `planilha-${ano}`,
       titulo: `${org?.nome ?? "Pelada"} — controle e receita ${ano}`,
-      subtitulo: `${linhas.length} atletas · cota ${brl(plano.cota)} · total do ano ${brl(totalAno)}`,
+      subtitulo: [
+        filtrando
+          ? `${linhas.length} de ${linhasTodas.length} atletas · ${descricaoFiltro}`
+          : `${linhas.length} atletas`,
+        `cota ${brl(plano.cota)}`,
+        `total ${brl(totalAno)}`,
+      ].join(" · "),
       paisagem: true,
       secoes: [
         {
@@ -135,10 +206,16 @@ function Planilha() {
               ...celulas.map((c) => c.texto),
               valorCompacto(total),
             ]),
-            ["", "Total mês", "", ...totaisMes.map((t) => (t ? valorCompacto(t) : "")), valorCompacto(totalAno)],
+            [
+              "",
+              "Total mês",
+              "",
+              ...totaisMes.map((t) => (t ? valorCompacto(t) : "")),
+              valorCompacto(totalAno),
+            ],
           ],
           totalNoFim: true,
-          vazio: "Nenhum participante ativo cadastrado.",
+          vazio: "Nenhum atleta neste recorte.",
         },
       ],
     });
@@ -150,8 +227,8 @@ function Planilha() {
         <div>
           <h1 className="text-3xl leading-none">Planilha</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {linhas.length} atletas · cota R$ {valorCompacto(plano.cota)} · total do ano R${" "}
-            {valorCompacto(totalAno)}
+            {filtrando ? `${linhas.length} de ${linhasTodas.length}` : linhas.length} atletas · cota
+            R$ {valorCompacto(plano.cota)} · total R$ {valorCompacto(totalAno)}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -180,12 +257,55 @@ function Planilha() {
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-[200px] flex-1">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar atleta"
+            className="pl-9"
+          />
+        </div>
+        <Select value={situacao} onValueChange={(v) => setSituacao(v as FiltroSituacao)}>
+          <SelectTrigger className="w-[210px]" aria-label="Filtrar por situação">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SITUACOES.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filtroPlano} onValueChange={(v) => setFiltroPlano(v as FiltroPlano)}>
+          <SelectTrigger className="w-[160px]" aria-label="Filtrar por plano">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PLANOS_FILTRO.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {filtrando && (
+          <Button variant="ghost" size="sm" onClick={limparFiltros}>
+            <X className="size-4" /> Limpar
+          </Button>
+        )}
+      </div>
+
       {carregando ? (
         <Skeleton className="h-96 rounded-xl" />
       ) : linhas.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center text-sm text-muted-foreground">
-            Nenhum participante ativo cadastrado.
+            {filtrando
+              ? "Nenhum atleta neste recorte. Ajuste os filtros acima."
+              : "Nenhum participante ativo cadastrado."}
           </CardContent>
         </Card>
       ) : (
