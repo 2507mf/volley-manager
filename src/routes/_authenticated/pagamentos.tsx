@@ -32,7 +32,7 @@ import {
   valorMensal,
 } from "@/lib/status";
 import { useOrg } from "@/lib/org";
-import { baixarPDF } from "@/lib/pdf";
+import { useRelatorio } from "@/components/relatorio";
 import { AvatarParticipante } from "@/components/foto";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -74,6 +74,7 @@ type Cobranca = {
 
 function Pagamentos() {
   const { org } = useOrg();
+  const { abrir: abrirRelatorio } = useRelatorio();
   const plano = usePlano();
   const participantes = useParticipantes();
   const pagamentos = usePagamentos();
@@ -96,10 +97,7 @@ function Pagamentos() {
   const anuais = ativos.filter((p) => p.tipo_plano === "anual");
 
   // A temporada define quem é cobrado: entrou, é cobrado todo mês até sair.
-  const doMes = useMemo(
-    () => mensalistasDoMes(ativos, mes, plano.diaVencimento),
-    [ativos, mes, plano.diaVencimento],
-  );
+  const doMes = useMemo(() => mensalistasDoMes(ativos, mes), [ativos, mes]);
 
   const resumoMes = useMemo(() => {
     const pagos = doMes.filter(
@@ -193,7 +191,7 @@ function Pagamentos() {
       (p) => statusMensalista(pags, p.id, mes, plano.diaVencimento) === "atrasado",
     );
 
-    baixarPDF({
+    abrirRelatorio({
       nome: `relatorio-${mes}`,
       titulo: `${org?.nome ?? "Pelada"} — ${monthLabel(mes)}`,
       subtitulo: `${resumoMes.pagos} de ${doMes.length} mensalistas pagos · vencimento dia ${plano.diaVencimento}`,
@@ -277,7 +275,6 @@ function Pagamentos() {
         },
       ],
     });
-    toast.success("Relatório em PDF gerado.");
   };
 
   const carregando = participantes.isLoading || pagamentos.isLoading;

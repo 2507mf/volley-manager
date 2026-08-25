@@ -101,7 +101,7 @@ const vazio = (): Form => ({
   tipo_plano: "mensalista",
   valorPersonalizado: false,
   valor_plano: "",
-  data_entrada: `${new Date().getFullYear()}-01-01`,
+  data_entrada: todayISO(),
   data_saida: "",
   numero: "",
   nome_camisa: "",

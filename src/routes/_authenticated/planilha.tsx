@@ -1,11 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, FileDown } from "lucide-react";
-import { toast } from "sonner";
 
 import { usePagamentos, useParticipantes, usePlano } from "@/lib/pelada";
 import { useOrg } from "@/lib/org";
-import { baixarPDF } from "@/lib/pdf";
+import { useRelatorio } from "@/components/relatorio";
 import { brl, MESES } from "@/lib/format";
 import {
   STATUS_ATLETA_CLASS,
@@ -42,6 +41,7 @@ type Celula = { texto: string; classe: string };
 
 function Planilha() {
   const { org } = useOrg();
+  const { abrir: abrirRelatorio } = useRelatorio();
   const plano = usePlano();
   const [ano, setAno] = useState(new Date().getFullYear());
   const participantes = useParticipantes();
@@ -57,7 +57,7 @@ function Planilha() {
     () =>
       ativos
         .map((p) => {
-          const temporada = new Set(mesesDaTemporada(p, ano, plano.diaVencimento));
+          const temporada = new Set(mesesDaTemporada(p, ano));
           const status = statusAtleta(pags, p, ano, plano.diaVencimento);
           const atraso = mesesEmAtraso(pags, p, ano, plano.diaVencimento);
           const anualPago = p.tipo_plano === "anual" ? pagamentoAnual(pags, p.id, ano) : undefined;
@@ -118,7 +118,7 @@ function Planilha() {
   const carregando = participantes.isLoading || pagamentos.isLoading;
 
   const emitirRelatorio = () => {
-    baixarPDF({
+    abrirRelatorio({
       nome: `planilha-${ano}`,
       titulo: `${org?.nome ?? "Pelada"} — controle e receita ${ano}`,
       subtitulo: `${linhas.length} atletas · cota ${brl(plano.cota)} · total do ano ${brl(totalAno)}`,
@@ -142,7 +142,6 @@ function Planilha() {
         },
       ],
     });
-    toast.success("Relatório em PDF gerado.");
   };
 
   return (
@@ -190,20 +189,27 @@ function Planilha() {
           </CardContent>
         </Card>
       ) : (
-        <div className="overflow-x-auto rounded-xl border">
+        <div className="max-h-[70vh] overflow-auto rounded-xl border">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="bg-muted/50">
-                <th className="sticky left-0 z-10 bg-muted/50 px-3 py-2 text-left font-semibold">
+              <tr>
+                <th className="sticky left-0 top-0 z-30 border-b bg-muted px-3 py-2 text-left font-semibold">
                   Atleta
                 </th>
-                <th className="whitespace-nowrap px-3 py-2 text-left font-semibold">Situação</th>
+                <th className="sticky top-0 z-20 whitespace-nowrap border-b bg-muted px-3 py-2 text-left font-semibold">
+                  Situação
+                </th>
                 {MESES.map((mes) => (
-                  <th key={mes} className="px-2 py-2 text-center font-semibold">
+                  <th
+                    key={mes}
+                    className="sticky top-0 z-20 border-b bg-muted px-2 py-2 text-center font-semibold"
+                  >
                     {mes.slice(0, 3)}
                   </th>
                 ))}
-                <th className="px-3 py-2 text-right font-semibold">Total</th>
+                <th className="sticky top-0 z-20 border-b bg-muted px-3 py-2 text-right font-semibold">
+                  Total
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -211,7 +217,7 @@ function Planilha() {
                 <tr key={p.id} className="border-t">
                   <td
                     className={cn(
-                      "sticky left-0 z-10 border-r px-3 py-2",
+                      "sticky left-0 z-10 border-r bg-card px-3 py-2",
                       STATUS_ATLETA_CLASS[status],
                     )}
                   >
@@ -250,9 +256,11 @@ function Planilha() {
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t bg-muted/50 font-semibold">
-                <td className="sticky left-0 z-10 bg-muted/50 px-3 py-2 text-left">Total mês</td>
-                <td className="px-3 py-2" />
+              <tr className="font-semibold">
+                <td className="sticky bottom-0 left-0 z-30 border-t bg-muted px-3 py-2 text-left">
+                  Total mês
+                </td>
+                <td className="sticky bottom-0 z-20 border-t bg-muted px-3 py-2" />
                 {totaisMes.map((t, i) => (
                   <td key={i} className="border-l px-2 py-2 text-center tabular-nums">
                     {t ? valorCompacto(t) : ""}

@@ -29,7 +29,7 @@ import {
   type PapelMembro,
 } from "@/lib/org";
 import { brl, formatDate, todayISO } from "@/lib/format";
-import { baixarPDF } from "@/lib/pdf";
+import { useRelatorio } from "@/components/relatorio";
 import { EscolherCor, EscolherIcone } from "@/components/sistema";
 import { MarcaIcone } from "@/components/marca";
 import { UploadArquivo } from "@/components/foto";
@@ -73,6 +73,7 @@ function Configuracoes() {
   const [email, setEmail] = useState("");
 
   const { org, orgId, superAdmin, papel, podeAdministrar, organizacoes, trocarOrg } = useOrg();
+  const { abrir: abrirRelatorio } = useRelatorio();
   const participantes = useParticipantes();
   const pagamentos = usePagamentos();
   const gastos = useGastos();
@@ -86,7 +87,7 @@ function Configuracoes() {
     const lista = [...(participantes.data ?? [])].sort((a, b) =>
       (a.apelido || a.nome).localeCompare(b.apelido || b.nome, "pt-BR"),
     );
-    baixarPDF({
+    abrirRelatorio({
       nome: `participantes-${todayISO()}`,
       titulo: `${org?.nome ?? "Pelada"} — participantes`,
       subtitulo: `${lista.filter((p) => p.status === "ativo").length} ativos · ${lista.length} no total`,
@@ -125,7 +126,6 @@ function Configuracoes() {
         },
       ],
     });
-    toast.success("Lista em PDF gerada.");
   };
 
   const saldo =

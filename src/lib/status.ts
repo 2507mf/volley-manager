@@ -50,25 +50,17 @@ export function valorAnuidade(p: Participante, plano: Plano): number {
  * A pelada abre vagas em janeiro: quem entra fica cobrado todos os meses até
  * sair. Estes são os meses de `ano` em que o atleta é cobrado (1 a 12).
  *
- * Duas bordas, como na planilha do clube:
- * - quem entra depois do dia de vencimento só começa a pagar no mês seguinte;
- * - o mês da saída não é cobrado.
+ * A cobrança começa **no mês da data de entrada**, mesmo que ele entre depois do
+ * vencimento. Quem só deve pagar a partir do mês seguinte entra com a data de
+ * entrada no primeiro dia daquele mês. O mês da saída não é cobrado.
  */
-export function mesesDaTemporada(
-  p: Participante,
-  ano: number,
-  diaVencimento = DIA_VENCIMENTO_PADRAO,
-): number[] {
+export function mesesDaTemporada(p: Participante, ano: number): number[] {
   const entrada = parseDate(p.data_entrada);
   const saida = parseDate(p.data_saida);
 
   let primeiro = 1;
   if (entrada && entrada.getFullYear() > ano) return [];
-  if (entrada && entrada.getFullYear() === ano) {
-    primeiro = entrada.getMonth() + 1;
-    if (entrada.getDate() > diaVencimento) primeiro++;
-    if (primeiro > 12) return [];
-  }
+  if (entrada && entrada.getFullYear() === ano) primeiro = entrada.getMonth() + 1;
 
   let ultimo = 12;
   if (saida && saida.getFullYear() < ano) return [];
@@ -80,29 +72,16 @@ export function mesesDaTemporada(
 }
 
 /** O atleta é cobrado na referência "YYYY-MM"? */
-export function naTemporada(
-  p: Participante,
-  referencia: string,
-  diaVencimento = DIA_VENCIMENTO_PADRAO,
-): boolean {
+export function naTemporada(p: Participante, referencia: string): boolean {
   const [ano, mes] = referencia.split("-").map(Number);
   if (!ano || !mes) return false;
-  return mesesDaTemporada(p, ano, diaVencimento).includes(mes);
+  return mesesDaTemporada(p, ano).includes(mes);
 }
 
 /** Atletas cobrados no mês, já ordenados como na planilha. */
-export function mensalistasDoMes(
-  participantes: Participante[],
-  referencia: string,
-  diaVencimento = DIA_VENCIMENTO_PADRAO,
-) {
+export function mensalistasDoMes(participantes: Participante[], referencia: string) {
   return participantes
-    .filter(
-      (p) =>
-        p.status === "ativo" &&
-        p.tipo_plano !== "anual" &&
-        naTemporada(p, referencia, diaVencimento),
-    )
+    .filter((p) => p.status === "ativo" && p.tipo_plano !== "anual" && naTemporada(p, referencia))
     .sort((a, b) => (a.apelido || a.nome).localeCompare(b.apelido || b.nome, "pt-BR"));
 }
 
@@ -166,7 +145,7 @@ export function mesesEmAtraso(
 ): number {
   if (p.tipo_plano === "anual") return 0;
   let count = 0;
-  for (const m of mesesDaTemporada(p, ano, diaVencimento)) {
+  for (const m of mesesDaTemporada(p, ano)) {
     const mes = `${ano}-${String(m).padStart(2, "0")}`;
     if (!mesVencido(mes, diaVencimento)) continue;
     if (!pagamentoDoMes(pagamentos, p.id, mes)) count++;

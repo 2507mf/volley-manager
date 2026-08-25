@@ -4,6 +4,9 @@
 --   • camisas — número, nome e tamanho
 --   • fluxo de caixa 2026 — resíduo de 2025, ressarcimento e energia/água
 --
+-- A cobrança começa no mês da data de entrada. Cézar foi admitido em 30/07 mas a
+-- planilha só o cobra em agosto, então a entrada dele é 01/08.
+--
 -- Substitui os dados de teste da organização VÔLEI 6. Mensalidade R$ 30, anuidade R$ 330
 -- (Dimitri paga R$ 30/mês = R$ 360/ano). Conferido contra os totais da planilha:
 -- mensalidades R$ 5.940,00 + anuidades R$ 3.000,00 = R$ 8.940,00.
@@ -50,7 +53,7 @@ BEGIN
   (33, 'Alfredo Matos Moura Junior', 'Alfredo', '(81) 9.9223-4169', 'alfmoura@gmail.com', '1970-06-15', '2026-04-02', 'mensalista'::public.tipo_plano, NULL, NULL, NULL, NULL, '(81) 99223-4196', 'Karina Magalhães', 'Esposa', 'Zé Carlos'),
   (14, 'Antonio Herbet de Medeiros Cardoso', 'Binho', '(81) 9.9926-3380', 'herbet.medeiros@hotmail.com', '1969-08-24', '2026-01-01', 'mensalista'::public.tipo_plano, NULL, 98, 'Binho', 'M', NULL, NULL, NULL, NULL),
   (10, 'Reginaldo Ricardo Miranda de Souza Junior', 'Buchecha', '(81) 9.9463-7479', 'reginaldoricardo2021@gmail.com', '1977-11-16', '2026-01-01', 'mensalista'::public.tipo_plano, NULL, 9, 'Jr Buchecha', 'GG', NULL, NULL, NULL, NULL),
-  (41, 'Arthur Cezar Belo dos Santos', 'Cézar', '(81) 9.8656-0333', 'cap.cezar@hotmail.com', '1973-11-07', '2026-07-30', 'mensalista'::public.tipo_plano, NULL, NULL, NULL, NULL, '(81) 98656-0399', 'Rozeane Belo', 'Esposa', 'Zanoni'),
+  (41, 'Arthur Cezar Belo dos Santos', 'Cézar', '(81) 9.8656-0333', 'cap.cezar@hotmail.com', '1973-11-07', '2026-08-01', 'mensalista'::public.tipo_plano, NULL, NULL, NULL, NULL, '(81) 98656-0399', 'Rozeane Belo', 'Esposa', 'Zanoni'),
   (19, 'Cicero Lourenco da Silva Filho', 'Cicero', '(85) 9.8203-6986', 'cicerosempre@hotmail.com', '1969-11-22', '2026-01-01', 'mensalista'::public.tipo_plano, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
   (1, 'Clériston Rafael Galvão Bayer', 'Clériston', '(81) 98273-9999', 'crgbayer@gmail.com', '1985-08-24', '2026-01-01', 'anual'::public.tipo_plano, NULL, 25, 'Bayer', 'G', NULL, NULL, NULL, NULL),
   (17, 'David da Silva Rego', 'David', '(81) 9.9846-9909', 'dd.rego@hotmail.com', '1966-12-08', '2026-01-01', 'anual'::public.tipo_plano, NULL, 4, 'David', 'P', NULL, NULL, NULL, NULL),

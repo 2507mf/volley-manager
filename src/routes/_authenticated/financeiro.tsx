@@ -42,7 +42,7 @@ import {
   type Gasto,
 } from "@/lib/pelada";
 import { brl, formatDate, monthKey, monthLabel, todayISO } from "@/lib/format";
-import { baixarPDF } from "@/lib/pdf";
+import { useRelatorio } from "@/components/relatorio";
 import { useOrg } from "@/lib/org";
 import { ArquivoImg, UploadArquivo } from "@/components/foto";
 import { Button } from "@/components/ui/button";
@@ -93,6 +93,7 @@ const NOVA_CATEGORIA = "__nova__";
 
 function Financeiro() {
   const { org } = useOrg();
+  const { abrir: abrirRelatorio } = useRelatorio();
   const gastos = useGastos();
   const receitas = useReceitas();
   const pagamentos = usePagamentos();
@@ -224,7 +225,7 @@ function Financeiro() {
       brl(Number(g.valor)),
     ]);
 
-    baixarPDF({
+    abrirRelatorio({
       nome: `financeiro-${sufixo}`,
       titulo: `Financeiro — ${org?.nome ?? "Pelada"}`,
       subtitulo: filtroMes === "todos" ? "Todos os meses" : monthLabel(filtroMes),
@@ -254,7 +255,6 @@ function Financeiro() {
         },
       ],
     });
-    toast.success("Relatório em PDF gerado.");
   };
 
   return (

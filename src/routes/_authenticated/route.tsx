@@ -21,6 +21,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { OrganizacaoProvider, useOrg } from "@/lib/org";
 import { MarcaIcone } from "@/components/marca";
 import { NovoSistemaDialog, PrimeiroSistema } from "@/components/sistema";
+import { RelatorioProvider } from "@/components/relatorio";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -55,7 +56,9 @@ const NAV = [
 function AppLayout() {
   return (
     <OrganizacaoProvider aoFicarSemOrganizacao={<PrimeiroSistema />}>
-      <Layout />
+      <RelatorioProvider>
+        <Layout />
+      </RelatorioProvider>
     </OrganizacaoProvider>
   );
 }
