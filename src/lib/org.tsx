@@ -77,15 +77,22 @@ export const iconeDe = (nome?: string | null): LucideIcon => ICONES[nome ?? ""] 
 
 /* --------------------------------- cores ------------------------------- */
 /** Cada tema troca o matiz das variáveis --primary / --chart-1 do tema. */
-export const CORES: { value: string; label: string; hue: number; chroma: number }[] = [
-  { value: "laranja", label: "Laranja", hue: 45, chroma: 0.19 },
-  { value: "azul", label: "Azul", hue: 253, chroma: 0.16 },
-  { value: "verde", label: "Verde", hue: 152, chroma: 0.16 },
-  { value: "vermelho", label: "Vermelho", hue: 25, chroma: 0.19 },
-  { value: "roxo", label: "Roxo", hue: 300, chroma: 0.17 },
-  { value: "ciano", label: "Ciano", hue: 200, chroma: 0.14 },
-  { value: "rosa", label: "Rosa", hue: 350, chroma: 0.18 },
-  { value: "amarelo", label: "Amarelo", hue: 85, chroma: 0.17 },
+export const CORES: {
+  value: string;
+  label: string;
+  hue: number;
+  chroma: number;
+  /** Mesma cor em sRGB, para o PDF (que não entende oklch). */
+  hex: string;
+}[] = [
+  { value: "laranja", label: "Laranja", hue: 45, chroma: 0.19, hex: "#f3680f" },
+  { value: "azul", label: "Azul", hue: 253, chroma: 0.16, hex: "#469bf7" },
+  { value: "verde", label: "Verde", hue: 152, chroma: 0.16, hex: "#32b364" },
+  { value: "vermelho", label: "Vermelho", hue: 25, chroma: 0.19, hex: "#f75d59" },
+  { value: "roxo", label: "Roxo", hue: 300, chroma: 0.17, hex: "#a97cf0" },
+  { value: "ciano", label: "Ciano", hue: 200, chroma: 0.14, hex: "#00b1ba" },
+  { value: "rosa", label: "Rosa", hue: 350, chroma: 0.18, hex: "#e662a8" },
+  { value: "amarelo", label: "Amarelo", hue: 85, chroma: 0.17, hex: "#c88d00" },
 ];
 
 export const corDe = (valor?: string | null) => CORES.find((c) => c.value === valor) ?? CORES[0]!;

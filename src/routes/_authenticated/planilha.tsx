@@ -185,7 +185,7 @@ function Planilha() {
   const emitirRelatorio = () => {
     abrirRelatorio({
       nome: filtrando ? `planilha-${ano}-filtrada` : `planilha-${ano}`,
-      titulo: `${org?.nome ?? "Pelada"} — controle e receita ${ano}`,
+      titulo: `Controle e receita ${ano}`,
       subtitulo: [
         filtrando
           ? `${linhas.length} de ${linhasTodas.length} atletas · ${descricaoFiltro}`

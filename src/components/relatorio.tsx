@@ -2,7 +2,9 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { Download, Share2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { montarPDF, type Relatorio } from "@/lib/pdf";
+import { carregarLogo, montarPDF, type MarcaPDF, type Relatorio } from "@/lib/pdf";
+import { corDe, useOrg } from "@/lib/org";
+import { useArquivoUrl } from "@/lib/pelada";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -23,20 +25,55 @@ export function useRelatorio() {
 const nomeArquivo = (nome: string) => (nome.endsWith(".pdf") ? nome : `${nome}.pdf`);
 
 export function RelatorioProvider({ children }: { children: ReactNode }) {
+  const { org } = useOrg();
+  const { data: logoUrl } = useArquivoUrl(org?.logo_url);
   const [relatorio, setRelatorio] = useState<Relatorio | null>(null);
   const [url, setUrl] = useState<string | null>(null);
   const blobRef = useRef<Blob | null>(null);
+  const logoRef = useRef<{ url: string; logo: MarcaPDF["logo"] } | null>(null);
 
+  // Todo relatório sai com a identidade do sistema em uso.
   useEffect(() => {
+    let cancelado = false;
     if (!relatorio) return;
-    const blob = montarPDF(relatorio).output("blob") as Blob;
-    blobRef.current = blob;
-    const objectUrl = URL.createObjectURL(blob);
-    setUrl(objectUrl);
-    return () => {
-      URL.revokeObjectURL(objectUrl);
-      blobRef.current = null;
+
+    const gerar = async () => {
+      let logo: MarcaPDF["logo"] = null;
+      if (logoUrl) {
+        if (logoRef.current?.url !== logoUrl) {
+          logoRef.current = { url: logoUrl, logo: await carregarLogo(logoUrl) };
+        }
+        logo = logoRef.current.logo ?? null;
+      }
+      if (cancelado) return;
+
+      const marca: MarcaPDF = {
+        nome: org?.nome ?? "Pelada",
+        cor: corDe(org?.cor).hex,
+        logo,
+      };
+      const blob = montarPDF({ ...relatorio, marca }).output("blob") as Blob;
+      blobRef.current = blob;
+      setUrl((anterior) => {
+        if (anterior) URL.revokeObjectURL(anterior);
+        return URL.createObjectURL(blob);
+      });
     };
+
+    void gerar();
+    return () => {
+      cancelado = true;
+    };
+  }, [relatorio, logoUrl, org?.nome, org?.cor]);
+
+  // Solta o blob ao fechar a prévia.
+  useEffect(() => {
+    if (relatorio) return;
+    setUrl((anterior) => {
+      if (anterior) URL.revokeObjectURL(anterior);
+      return null;
+    });
+    blobRef.current = null;
   }, [relatorio]);
 
   const baixar = () => {

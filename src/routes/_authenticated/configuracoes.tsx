@@ -89,13 +89,23 @@ function Configuracoes() {
     );
     abrirRelatorio({
       nome: `participantes-${todayISO()}`,
-      titulo: `${org?.nome ?? "Pelada"} — participantes`,
+      titulo: "Participantes",
       subtitulo: `${lista.filter((p) => p.status === "ativo").length} ativos · ${lista.length} no total`,
       paisagem: true,
       secoes: [
         {
           titulo: "Cadastro",
-          colunas: ["Cód.", "Nome", "Apelido", "Plano", "WhatsApp", "E-mail", "Nascimento", "Entrada", "Status"],
+          colunas: [
+            "Cód.",
+            "Nome",
+            "Apelido",
+            "Plano",
+            "WhatsApp",
+            "E-mail",
+            "Nascimento",
+            "Entrada",
+            "Status",
+          ],
           linhas: lista.map((p) => [
             p.codigo ?? "",
             p.nome,
@@ -111,7 +121,16 @@ function Configuracoes() {
         },
         {
           titulo: "Camisa e contato de emergência",
-          colunas: ["Atleta", "Nº", "Nome na camisa", "Tam.", "Contato", "Telefone", "Parentesco", "Indicado por"],
+          colunas: [
+            "Atleta",
+            "Nº",
+            "Nome na camisa",
+            "Tam.",
+            "Contato",
+            "Telefone",
+            "Parentesco",
+            "Indicado por",
+          ],
           linhas: lista.map((p) => [
             p.apelido || p.nome,
             p.numero ?? "",

@@ -73,7 +73,10 @@ export const Route = createFileRoute("/_authenticated/financeiro")({
       { title: "Financeiro" },
       { name: "description", content: "Entradas, saídas, saldo em caixa e relatórios da pelada." },
       { property: "og:title", content: "Financeiro" },
-      { property: "og:description", content: "Entradas, saídas, saldo em caixa e relatórios da pelada." },
+      {
+        property: "og:description",
+        content: "Entradas, saídas, saldo em caixa e relatórios da pelada.",
+      },
     ],
   }),
   component: Financeiro,
@@ -227,7 +230,7 @@ function Financeiro() {
 
     abrirRelatorio({
       nome: `financeiro-${sufixo}`,
-      titulo: `Financeiro — ${org?.nome ?? "Pelada"}`,
+      titulo: "Financeiro",
       subtitulo: filtroMes === "todos" ? "Todos os meses" : monthLabel(filtroMes),
       secoes: [
         {
@@ -302,7 +305,9 @@ function Financeiro() {
               <ArrowDownRight className="size-4 text-destructive" /> Saídas
             </p>
             <p className="stat-num mt-2 text-2xl text-destructive">{brl(totais.saidas)}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{gastosFiltrados.length} lançamentos</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {gastosFiltrados.length} lançamentos
+            </p>
           </CardContent>
         </Card>
         <Card className="border-primary/50 bg-primary/5">
@@ -435,7 +440,12 @@ function Financeiro() {
                     }}
                   />
                   <Legend />
-                  <Bar dataKey="entradas" name="Entradas" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
+                  <Bar
+                    dataKey="entradas"
+                    name="Entradas"
+                    fill="var(--chart-2)"
+                    radius={[4, 4, 0, 0]}
+                  />
                   <Bar dataKey="saidas" name="Saídas" fill="var(--chart-5)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -777,7 +787,12 @@ function FormReceita({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="data-rec">Data</Label>
-            <Input id="data-rec" type="date" value={data} onChange={(e) => setData(e.target.value)} />
+            <Input
+              id="data-rec"
+              type="date"
+              value={data}
+              onChange={(e) => setData(e.target.value)}
+            />
           </div>
         </div>
         <DialogFooter>

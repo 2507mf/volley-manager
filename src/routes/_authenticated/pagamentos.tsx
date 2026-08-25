@@ -193,7 +193,7 @@ function Pagamentos() {
 
     abrirRelatorio({
       nome: `relatorio-${mes}`,
-      titulo: `${org?.nome ?? "Pelada"} — ${monthLabel(mes)}`,
+      titulo: `Pagamentos — ${monthLabel(mes)}`,
       subtitulo: `${resumoMes.pagos} de ${doMes.length} mensalistas pagos · vencimento dia ${plano.diaVencimento}`,
       secoes: [
         {
